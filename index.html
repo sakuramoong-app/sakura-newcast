@@ -352,6 +352,28 @@
     html += '</div>';
     html += '</div>';
 
+    // 新人バナー
+    var banner = data.bannerChoice || {};
+    html += '<div class="section alt">';
+    html += '<div class="section-title">新人バナーについて</div>';
+    html += '<p style="font-size:12.5px;color:var(--sub);">作成すると、お客様に見つけてもらいやすくなります。作成する場合、在籍開始まで約2週間、作成しない場合は約1週間弱かかります。</p>';
+    html += '<div class="choice-row">';
+    html += '<button class="choice-btn ' + (banner.wantBanner === true ? 'selected' : '') + '" onclick="setBanner(true)">作成する</button>';
+    html += '<button class="choice-btn ' + (banner.wantBanner === false ? 'selected' : '') + '" onclick="setBanner(false)">作成しない</button>';
+    html += '</div>';
+    html += '</div>';
+
+    // お仕事セット
+    var kit = data.kitChoice || {};
+    html += '<div class="section alt">';
+    html += '<div class="section-title">お仕事セットについて</div>';
+    html += '<p style="font-size:12.5px;color:var(--sub);">ローション・うがい薬ボトル・ポーチは、事務所のものを使うか、ご自身で用意するか選べます。事務所のものを使う場合は買取500円（中身の補充は無料）です。</p>';
+    html += '<div class="choice-row">';
+    html += '<button class="choice-btn ' + (kit.type === 'shop' ? 'selected' : '') + '" onclick="setKit(\'shop\')">事務所で買う（500円）</button>';
+    html += '<button class="choice-btn ' + (kit.type === 'own' ? 'selected' : '') + '" onclick="setKit(\'own\')">自分で用意する</button>';
+    html += '</div>';
+    html += '</div>';
+
     // ウィッグ/地毛
     var wig = data.wigChoice || {};
     html += '<div class="section alt2">';
@@ -480,6 +502,42 @@
           return;
         }
         currentData.wigChoice = result.wigChoice;
+        renderRoom(currentData);
+      })
+      .catch(function(){ alert('通信エラーが発生しました'); });
+  }
+
+  function setBanner(wantBanner){
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setBannerChoice', id: roomId, wantBanner: wantBanner })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          alert('保存に失敗しました');
+          return;
+        }
+        currentData.bannerChoice = result.bannerChoice;
+        currentData.checklist = result.checklist;
+        renderRoom(currentData);
+      })
+      .catch(function(){ alert('通信エラーが発生しました'); });
+  }
+
+  function setKit(type){
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setKitChoice', id: roomId, type: type })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          alert('保存に失敗しました');
+          return;
+        }
+        currentData.kitChoice = result.kitChoice;
+        currentData.checklist = result.checklist;
         renderRoom(currentData);
       })
       .catch(function(){ alert('通信エラーが発生しました'); });
