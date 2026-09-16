@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>在籍作成ルーム管理（内勤用）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF7F5;
+    --pink:#F2A6B3;
+    --pink-soft:#FDEDF0;
+    --lav:#B9A6D9;
+    --lav-soft:#F1EAFA;
+    --mint:#7FC8AA;
+    --mint-soft:#E6F6EE;
+    --ink:#5C4B4F;
+    --sub:#9C8B8F;
+  }
+  *{ box-sizing:border-box; }
+  html, body{
+    margin:0;
+    font-family: 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    line-height:1.7;
+  }
+  body{
+    padding:24px 18px 60px;
+    max-width:640px;
+    margin:0 auto;
+  }
+  .header{ text-align:center; margin-bottom:22px; }
+  .kicker{
+    display:inline-block;
+    font-size:12.5px;
+    color:#fff;
+    background:var(--pink);
+    font-weight:800;
+    padding:4px 16px;
+    border-radius:99px;
+  }
+  h1{ font-size:21px; margin:10px 0 6px; font-weight:800; }
+  .lead{ font-size:12.5px; color:var(--sub); }
+
+  .card{
+    background:#fff;
+    border-radius:18px;
+    padding:18px;
+    margin-bottom:18px;
+    box-shadow:0 3px 12px rgba(217,160,180,.14);
+  }
+  .card-title{ font-size:15px; font-weight:800; margin-bottom:14px; }
+
+  label{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    color:var(--sub);
+    margin:12px 0 5px;
+  }
+  label:first-of-type{ margin-top:0; }
+  input[type=text], input[type=number], input[type=password]{
+    width:100%;
+    padding:10px 13px;
+    border:1.5px solid #eee;
+    border-radius:11px;
+    font-size:14px;
+    font-family:inherit;
+    background:#FAF8F6;
+    color:var(--ink);
+  }
+  input:focus{ outline:none; border-color:var(--pink); background:#fff; }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+
+  .btn{
+    width:100%;
+    border:none;
+    background:var(--pink);
+    color:#fff;
+    font-family:inherit;
+    font-weight:800;
+    font-size:14.5px;
+    padding:13px;
+    border-radius:99px;
+    cursor:pointer;
+    margin-top:16px;
+  }
+  .btn:hover{ background:#e8909f; }
+  .btn:disabled{ background:#ddd; cursor:not-allowed; }
+  .btn.secondary{ background:var(--mint); }
+  .btn.secondary:hover{ background:#5aa886; }
+  .btn.danger{ background:#e8899b; }
+
+  .result{
+    display:none;
+    margin-top:14px;
+    background:var(--mint-soft);
+    border-radius:14px;
+    padding:14px 16px;
+  }
+  .result.show{ display:block; }
+  .result-url{
+    word-break:break-all;
+    font-size:12.5px;
+    color:#2c5b45;
+    margin-bottom:10px;
+  }
+
+  .room-item{
+    background:#fff;
+    border-radius:14px;
+    padding:14px 16px;
+    margin-bottom:10px;
+    box-shadow:0 2px 8px rgba(217,160,180,.1);
+  }
+  .room-item.closed{ opacity:0.55; }
+  .room-name{ font-size:14.5px; font-weight:800; margin-bottom:4px; }
+  .room-meta{ font-size:11.5px; color:var(--sub); margin-bottom:8px; }
+  .room-actions{ display:flex; gap:8px; }
+  .room-actions button{
+    flex:1;
+    border:none;
+    padding:8px;
+    border-radius:99px;
+    font-family:inherit;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn-copy{ background:var(--lav-soft); color:#6c5896; }
+  .btn-close{ background:#FDEDF0; color:#c9556a; }
+
+  .badge{
+    display:inline-block;
+    font-size:10.5px;
+    font-weight:700;
+    padding:2px 9px;
+    border-radius:99px;
+    margin-left:6px;
+  }
+  .badge.active{ background:var(--mint-soft); color:#2c5b45; }
+  .badge.closed{ background:#eee; color:#888; }
+
+  .empty{ text-align:center; color:var(--sub); font-size:13px; padding:30px 0; }
+
+  .token-gate{
+    text-align:center;
+    padding:60px 20px;
+  }
+</style>
+</head>
+<body>
+
+<div id="tokenGate" class="token-gate">
+  <span class="kicker">サクラムーングループ・内勤用</span>
+  <h1>在籍作成ルーム管理</h1>
+  <p class="lead">合言葉を入力してください</p>
+  <input type="password" id="tokenInput" placeholder="合言葉" style="max-width:260px;margin:16px auto 0;">
+  <button class="btn" style="max-width:260px;margin:12px auto 0;" onclick="checkToken()">開く</button>
+</div>
+
+<div id="mainApp" style="display:none;">
+  <div class="header">
+    <span class="kicker">サクラムーングループ・内勤用</span>
+    <h1>在籍作成ルーム管理</h1>
+    <p class="lead">新人が来たらここでルームを作成し、URLをLINEで送ってください。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">新しいルームを作成</div>
+
+    <label>キャスト名</label>
+    <input type="text" id="newName" placeholder="例：ひまり">
+
+    <label>バック金額（円）</label>
+    <div class="row3">
+      <div><label style="margin:0 0 4px;">60分</label><input type="number" id="newB60" placeholder="9000"></div>
+      <div><label style="margin:0 0 4px;">90分</label><input type="number" id="newB90" placeholder="12000"></div>
+      <div><label style="margin:0 0 4px;">120分</label><input type="number" id="newB120" placeholder="16000"></div>
+    </div>
+
+    <label>本指名バック（円）</label>
+    <input type="number" id="newBh" placeholder="1000">
+
+    <button class="btn" id="createBtn" onclick="createRoom()">ルームを作成</button>
+
+    <div class="result" id="createResult">
+      <div class="result-url" id="createUrl"></div>
+      <button class="btn secondary" style="margin-top:0;" onclick="copyCreatedUrl()" id="copyBtn">URLをコピー</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">ルーム一覧</div>
+    <div id="roomList"><div class="empty">読み込んでいます...</div></div>
+  </div>
+</div>
+
+<script>
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbxKWQsxsX2SJ0cZ7YfxZJgW1ujmM8xRvrNcjcDYpohI6Gqkem1BhiqVO0PcU8KjjMnf/exec';
+  var STAFF_TOKEN_STORAGE_KEY = 'onboarding_room_token';
+  var savedToken = null;
+  var lastCreatedUrl = '';
+
+  function checkToken(){
+    var token = document.getElementById('tokenInput').value.trim();
+    if(!token){
+      alert('合言葉を入力してください');
+      return;
+    }
+    savedToken = token;
+    sessionStorage.setItem(STAFF_TOKEN_STORAGE_KEY, token);
+    document.getElementById('tokenGate').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    loadRooms();
+  }
+
+  function createRoom(){
+    var name = document.getElementById('newName').value.trim();
+    if(!name){
+      alert('キャスト名を入力してください');
+      return;
+    }
+
+    var body = {
+      action: 'createRoom',
+      token: savedToken,
+      castName: name,
+      back60: document.getElementById('newB60').value.trim(),
+      back90: document.getElementById('newB90').value.trim(),
+      back120: document.getElementById('newB120').value.trim(),
+      backHonshimei: document.getElementById('newBh').value.trim()
+    };
+
+    var btn = document.getElementById('createBtn');
+    btn.disabled = true;
+    btn.textContent = '作成中...';
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        btn.disabled = false;
+        btn.textContent = 'ルームを作成';
+        if(data.error){
+          alert('作成に失敗しました：' + data.error);
+          return;
+        }
+        var baseUrl = window.location.href.replace('staff.html', 'index.html').split('?')[0];
+        lastCreatedUrl = baseUrl + '?id=' + data.roomId;
+        document.getElementById('createUrl').textContent = lastCreatedUrl;
+        document.getElementById('createResult').classList.add('show');
+        document.getElementById('copyBtn').textContent = 'URLをコピー';
+
+        // フォームをクリア
+        document.getElementById('newName').value = '';
+        document.getElementById('newB60').value = '';
+        document.getElementById('newB90').value = '';
+        document.getElementById('newB120').value = '';
+        document.getElementById('newBh').value = '';
+
+        loadRooms();
+      })
+      .catch(function(){
+        btn.disabled = false;
+        btn.textContent = 'ルームを作成';
+        alert('通信エラーが発生しました');
+      });
+  }
+
+  function copyCreatedUrl(){
+    copyText(lastCreatedUrl, document.getElementById('copyBtn'));
+  }
+
+  function copyText(text, btn){
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'コピーしました';
+      }).catch(function(){ fallbackCopy(text, btn); });
+    } else {
+      fallbackCopy(text, btn);
+    }
+  }
+
+  function fallbackCopy(text, btn){
+    var temp = document.createElement('textarea');
+    temp.value = text;
+    document.body.appendChild(temp);
+    temp.select();
+    try{
+      document.execCommand('copy');
+      btn.textContent = 'コピーしました';
+    }catch(e){
+      alert('コピーに失敗しました');
+    }
+    document.body.removeChild(temp);
+  }
+
+  function loadRooms(){
+    fetch(GAS_URL + '?action=listRooms&token=' + encodeURIComponent(savedToken))
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(data.error){
+          document.getElementById('roomList').innerHTML = '<div class="empty">読み込みに失敗しました：' + data.error + '</div>';
+          return;
+        }
+        renderRoomList(data.rooms);
+      })
+      .catch(function(){
+        document.getElementById('roomList').innerHTML = '<div class="empty">通信エラーが発生しました</div>';
+      });
+  }
+
+  function renderRoomList(rooms){
+    if(!rooms || rooms.length === 0){
+      document.getElementById('roomList').innerHTML = '<div class="empty">まだルームがありません</div>';
+      return;
+    }
+
+    var baseUrl = window.location.href.replace('staff.html', 'index.html').split('?')[0];
+
+    var html = '';
+    rooms.forEach(function(room){
+      var isClosed = room.status !== 'active';
+      var url = baseUrl + '?id=' + room.roomId;
+      html += '<div class="room-item' + (isClosed ? ' closed' : '') + '">';
+      html += '<div class="room-name">' + escapeHtml(room.castName || '（名称未設定）') +
+        '<span class="badge ' + (isClosed ? 'closed' : 'active') + '">' + (isClosed ? '終了済み' : '稼働中') + '</span></div>';
+      html += '<div class="room-meta">作成：' + formatDate(room.createdAt) + (isClosed ? ' ／ 終了：' + formatDate(room.closedAt) : '') + '</div>';
+      html += '<div class="room-actions">';
+      html += '<button class="btn-copy" onclick="copyRoomUrl(\'' + url + '\', this)">URLをコピー</button>';
+      if(!isClosed){
+        html += '<button class="btn-close" onclick="closeRoom(\'' + room.roomId + '\')">終了する</button>';
+      }
+      html += '</div>';
+      html += '</div>';
+    });
+
+    document.getElementById('roomList').innerHTML = html;
+  }
+
+  function copyRoomUrl(url, btn){
+    copyText(url, btn);
+  }
+
+  function closeRoom(roomId){
+    if(!confirm('このルームを終了しますか？ 終了すると、キャストはこのページを開けなくなります。')){
+      return;
+    }
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'closeRoom', token: savedToken, id: roomId })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(data.error){
+          alert('終了に失敗しました：' + data.error);
+          return;
+        }
+        loadRooms();
+      })
+      .catch(function(){
+        alert('通信エラーが発生しました');
+      });
+  }
+
+  function formatDate(iso){
+    if(!iso) return '-';
+    var d = new Date(iso);
+    return (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+
+  function escapeHtml(str){
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ページを開いたときに、以前入力した合言葉が残っていれば自動で使う
+  (function(){
+    var stored = sessionStorage.getItem(STAFF_TOKEN_STORAGE_KEY);
+    if(stored){
+      document.getElementById('tokenInput').value = stored;
+    }
+  })();
+</script>
+
+</body>
+</html>

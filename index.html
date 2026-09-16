@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ご入店にあたってのご説明</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF7F5;
+    --paper:#fff;
+    --ink:#5C4B4F;
+    --sub:#9C8B8F;
+    --pink:#F2A6B3;
+    --pink-soft:#FDEDF0;
+    --lav:#B9A6D9;
+    --lav-soft:#F1EAFA;
+    --mint:#7FC8AA;
+    --mint-soft:#E6F6EE;
+  }
+  * { box-sizing: border-box; }
+  html, body{
+    margin:0;
+    font-family: 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif;
+    color:var(--ink);
+    font-size:15px;
+    line-height:1.75;
+    background:var(--bg);
+  }
+  body{
+    padding:22px 18px 40px;
+    max-width:640px;
+    margin:0 auto;
+  }
+  .header{ text-align:center; margin-bottom:18px; }
+  .kicker{
+    display:inline-block;
+    font-size:13px;
+    color:#fff;
+    background:var(--pink);
+    padding:5px 18px;
+    border-radius:99px;
+    font-weight:800;
+  }
+  h1{
+    font-size:23px;
+    margin:10px 0 6px;
+    font-weight:800;
+  }
+  .to{ font-size:14px; color:var(--sub); margin-top:4px; }
+  .to strong{ font-size:17px; color:var(--ink); }
+  .lead{ font-size:12.5px; color:var(--sub); margin-top:8px; }
+
+  .section{
+    margin-bottom:18px;
+    background:var(--paper);
+    border-radius:18px;
+    padding:16px 18px;
+    box-shadow:0 3px 12px rgba(217,160,180,.14);
+  }
+  .section.alt3{ background:var(--pink-soft); }
+  .section-title{ font-size:16px; font-weight:800; margin-bottom:10px; }
+
+  table.back-table{
+    width:100%;
+    border-collapse:collapse;
+    background:#fff;
+    border-radius:12px;
+    overflow:hidden;
+    margin-bottom:10px;
+  }
+  table.back-table th{
+    background:var(--pink);
+    color:#fff;
+    font-size:12.5px;
+    padding:8px 12px;
+    text-align:left;
+  }
+  table.back-table td{
+    padding:8px 12px;
+    font-size:14px;
+    border-bottom:1px solid #F5E3E6;
+  }
+  table.back-table td.amount{ text-align:right; font-weight:800; color:#c9556a; }
+
+  .extra-list{ list-style:none; margin:0; padding:0; }
+  .extra-list li{
+    background:#fff;
+    border-radius:10px;
+    padding:8px 13px;
+    margin-bottom:6px;
+    font-size:13.5px;
+    display:flex;
+    justify-content:space-between;
+  }
+
+  .state-box{
+    text-align:center;
+    padding:60px 20px;
+  }
+  .state-box .emoji{ font-size:40px; margin-bottom:14px; }
+  .state-box p{ color:var(--sub); font-size:14px; }
+
+  .closing-note{
+    text-align:center;
+    font-size:11px;
+    color:var(--sub);
+    margin-top:24px;
+    padding:10px;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="state-box">
+    <div class="emoji">🌸</div>
+    <p>読み込んでいます...</p>
+  </div>
+</div>
+
+<script>
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbxKWQsxsX2SJ0cZ7YfxZJgW1ujmM8xRvrNcjcDYpohI6Gqkem1BhiqVO0PcU8KjjMnf/exec';
+
+  function getParam(name){
+    var params = new URLSearchParams(window.location.search);
+    return params.get(name);
+  }
+
+  function renderError(message){
+    document.getElementById('app').innerHTML =
+      '<div class="state-box">' +
+        '<div class="emoji">🌸</div>' +
+        '<p>' + message + '</p>' +
+      '</div>';
+  }
+
+  function renderRoom(data){
+    var html = '';
+    html += '<div class="header">';
+    html += '<span class="kicker">サクラムーングループ</span>';
+    html += '<h1>ご入店にあたってのご説明</h1>';
+    html += '<p class="to">キャスト名：<strong>' + escapeHtml(data.castName) + '</strong> 様</p>';
+    html += '<p class="lead">面接時にご説明した内容をまとめました。わからないことがあれば、いつでも店舗までご質問ください。</p>';
+    html += '</div>';
+
+    html += '<div class="section alt3">';
+    html += '<div class="section-title">バックについて</div>';
+    html += '<table class="back-table">';
+    html += '<tr><th>コース</th><th style="text-align:right;">バック金額</th></tr>';
+    html += '<tr><td>60分コース</td><td class="amount">' + formatYen(data.back60) + '</td></tr>';
+    html += '<tr><td>90分コース</td><td class="amount">' + formatYen(data.back90) + '</td></tr>';
+    html += '<tr><td>120分コース</td><td class="amount">' + formatYen(data.back120) + '</td></tr>';
+    html += '</table>';
+    html += '<ul class="extra-list">';
+    html += '<li><span>オプションバック</span><span>基本半額</span></li>';
+    html += '<li><span>射精オプション</span><span>5,000円中3,000円</span></li>';
+    html += '<li><span>本指名バック</span><span>' + formatYen(data.backHonshimei) + '</span></li>';
+    html += '</ul>';
+    html += '</div>';
+
+    html += '<div class="section">';
+    html += '<div class="section-title">新人ガイド</div>';
+    html += '<p style="font-size:13.5px;color:var(--sub);">お仕事の流れ・順守事項・お仕事セットなどの詳細は、面接時にお渡しした「新人ガイド」をご参照ください。</p>';
+    html += '</div>';
+
+    html += '<div class="closing-note">※このページは在籍作成が完了次第、予告なく閉鎖します。</div>';
+
+    document.getElementById('app').innerHTML = html;
+  }
+
+  function formatYen(v){
+    if(!v && v !== 0) return '未定';
+    return Number(v).toLocaleString() + '円';
+  }
+
+  function escapeHtml(str){
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  (function(){
+    var roomId = getParam('id');
+    if(!roomId){
+      renderError('URLが正しくありません。お手数ですが、送られたリンクをそのままお使いください。');
+      return;
+    }
+
+    fetch(GAS_URL + '?action=getRoom&id=' + encodeURIComponent(roomId))
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(data.error === 'not_found'){
+          renderError('このページは見つかりませんでした。URLをご確認ください。');
+        } else if(data.error === 'closed'){
+          renderError('このページはすでに閉鎖されています。ご不明な点は店舗までご確認ください。');
+        } else if(data.error){
+          renderError('読み込みに失敗しました。時間をおいて再度お試しください。');
+        } else {
+          renderRoom(data);
+        }
+      })
+      .catch(function(){
+        renderError('読み込みに失敗しました。通信環境をご確認のうえ、再度お試しください。');
+      });
+  })();
+</script>
+
+</body>
+</html>
