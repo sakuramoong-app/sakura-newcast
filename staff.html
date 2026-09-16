@@ -167,6 +167,8 @@
   }
   .room-check-icon.done{ background:var(--mint); color:#fff; }
   .room-check-icon.pending{ background:#eee; color:#bbb; }
+  .room-check-icon.clickable{ cursor:pointer; transition:transform .1s ease; }
+  .room-check-icon.clickable:active{ transform:scale(0.85); }
   .room-check-label{ font-size:12.5px; flex:1; color:var(--ink); }
   .room-check-label.done{ color:var(--sub); text-decoration:line-through; text-decoration-color:#ddd; }
   .room-check-ownerbadge{
@@ -177,13 +179,62 @@
   }
   .room-check-ownerbadge.cast{ background:var(--lav-soft); color:#6c5896; }
   .room-check-ownerbadge.staff{ background:var(--pink-soft); color:#c9556a; }
-  .room-check-staff-toggle{
-    font-size:10.5px;
-    color:#fff;
-    background:var(--pink);
-    border:none;
+  .room-check-ownerbadge.staffOnly{ background:#eee; color:#888; }
+
+  .room-checklist-group-title{
+    font-size:11px;
+    font-weight:800;
+    color:var(--sub);
+    margin:14px 0 6px;
+    padding-top:8px;
+    border-top:1px solid #F0E8E6;
+  }
+  .room-checklist-group-title:first-child{ margin-top:0; border-top:none; padding-top:0; }
+
+  .room-choices{
+    background:var(--lav-soft);
+    border-radius:12px;
+    padding:10px 12px;
+    margin-top:8px;
+  }
+  .room-choice-title{ font-size:11px; font-weight:800; color:#6c5896; margin-bottom:6px; }
+  .room-choice-row{
+    display:flex; justify-content:space-between;
+    font-size:12px; color:var(--ink);
+    padding:3px 0;
+  }
+  .room-choice-val{ color:#6c5896; font-weight:700; }
+
+  .room-comments{ margin-top:6px; max-height:200px; overflow-y:auto; }
+  .room-comment{
+    background:#FAF8F6;
+    border-radius:10px;
+    padding:8px 10px;
+    margin-bottom:6px;
+  }
+  .room-comment-meta{ font-size:10px; color:var(--sub); margin-bottom:2px; }
+  .room-comment-text{ font-size:12.5px; color:var(--ink); white-space:pre-wrap; }
+  .room-comment-empty{ font-size:11.5px; color:var(--sub); padding:6px 0; }
+  .room-comment-input-row{ display:flex; gap:6px; margin-top:8px; }
+  .room-comment-input{
+    flex:1;
+    padding:8px 11px;
+    border:1.5px solid #eee;
     border-radius:99px;
-    padding:4px 10px;
+    font-size:12.5px;
+    font-family:inherit;
+    background:#FAF8F6;
+  }
+  .room-comment-input:focus{ outline:none; border-color:var(--pink); background:#fff; }
+  .room-comment-send{
+    border:none;
+    background:var(--pink);
+    color:#fff;
+    font-family:inherit;
+    font-weight:700;
+    font-size:12px;
+    padding:8px 16px;
+    border-radius:99px;
     cursor:pointer;
     flex-shrink:0;
   }
@@ -362,6 +413,7 @@
   }
 
   var globalChecklistMeta = {};
+  var lastRoomsData = [];
 
   function loadRooms(){
     fetch(GAS_URL + '?action=listRooms&token=' + encodeURIComponent(savedToken))
@@ -372,6 +424,7 @@
           return;
         }
         globalChecklistMeta = data.checklistMeta || {};
+        lastRoomsData = data.rooms || [];
         renderRoomList(data.rooms);
       })
       .catch(function(){
@@ -411,19 +464,59 @@
       html += '</div>';
 
       html += '<div class="room-checklist" id="roomChecklist' + idx + '">';
+
+      // キャストの選択内容
+      var banner = room.bannerChoice || {};
+      var kit = room.kitChoice || {};
+      var wig = room.wigChoice || {};
+      html += '<div class="room-choices">';
+      html += '<div class="room-choice-title">キャストの選択内容</div>';
+      html += '<div class="room-choice-row"><span>新人バナー</span><span class="room-choice-val">' + (banner.wantBanner === true ? '作成する' : (banner.wantBanner === false ? '作成しない' : '未回答')) + '</span></div>';
+      html += '<div class="room-choice-row"><span>お仕事セット</span><span class="room-choice-val">' + (kit.type === 'shop' ? '事務所で購入' : (kit.type === 'own' ? '自分で用意' : '未回答')) + '</span></div>';
+      var wigText = '未回答';
+      if(wig.type === 'wig') wigText = 'ウィッグを使う';
+      else if(wig.type === 'jimoto') wigText = '地毛（ヘアメイク：' + (wig.hairMake === true ? '行く' : (wig.hairMake === false ? '行かない' : '未回答')) + '）';
+      html += '<div class="room-choice-row"><span>ウィッグ/地毛</span><span class="room-choice-val">' + wigText + '</span></div>';
+      html += '</div>';
+
+      // やることリスト（キャスト共有・店舗確認・内勤専用すべて、チェックマークで操作）
+      html += '<div class="room-checklist-group-title">やることリスト（キャストにも表示）</div>';
       metaKeys.forEach(function(key){
         var meta = globalChecklistMeta[key];
+        if(meta.owner === 'staffOnly') return;
         var state = checklist[key] || { done: false };
-        html += '<div class="room-check-item">';
-        html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
-        html += '<div class="room-check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
-        html += '<span class="room-check-ownerbadge ' + meta.owner + '">' + (meta.owner === 'cast' ? 'キャスト' : '内勤') + '</span>';
-        if(meta.owner === 'staff' && !isClosed){
-          html += '<button class="room-check-staff-toggle" onclick="toggleStaffChecklist(\'' + room.roomId + '\',\'' + key + '\',' + (!state.done) + ')">' + (state.done ? '取消' : '完了') + '</button>';
-        }
-        html += '</div>';
+        html += renderRoomCheckItem(room.roomId, key, meta, state, isClosed);
       });
+
+      html += '<div class="room-checklist-group-title">内勤チェック（キャストには見えません）</div>';
+      metaKeys.forEach(function(key){
+        var meta = globalChecklistMeta[key];
+        if(meta.owner !== 'staffOnly') return;
+        var state = checklist[key] || { done: false };
+        html += renderRoomCheckItem(room.roomId, key, meta, state, isClosed);
+      });
+
+      // コメント
+      var comments = room.comments || [];
+      html += '<div class="room-checklist-group-title">コメント</div>';
+      html += '<div class="room-comments" id="roomComments' + idx + '">';
+      if(comments.length === 0){
+        html += '<div class="room-comment-empty">まだコメントはありません</div>';
+      } else {
+        comments.slice().reverse().forEach(function(c){
+          html += '<div class="room-comment">';
+          html += '<div class="room-comment-meta">' + escapeHtml(c.author || '内勤') + '　' + formatDate(c.at) + '</div>';
+          html += '<div class="room-comment-text">' + escapeHtml(c.text) + '</div>';
+          html += '</div>';
+        });
+      }
       html += '</div>';
+      html += '<div class="room-comment-input-row">';
+      html += '<input type="text" class="room-comment-input" id="commentInput' + idx + '" placeholder="コメントを入力">';
+      html += '<button class="room-comment-send" onclick="sendComment(\'' + room.roomId + '\',' + idx + ')">送信</button>';
+      html += '</div>';
+
+      html += '</div>'; // room-checklist
 
       html += '</div>';
     });
@@ -431,12 +524,42 @@
     document.getElementById('roomList').innerHTML = html;
   }
 
+  function renderRoomCheckItem(roomId, key, meta, state, isClosed){
+    var html = '<div class="room-check-item">';
+    if(!isClosed){
+      html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + ' clickable" onclick="toggleStaffChecklist(\'' + roomId + '\',\'' + key + '\',' + (!state.done) + ', this)">' + (state.done ? '✓' : '') + '</div>';
+    } else {
+      html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
+    }
+    html += '<div class="room-check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
+    html += '<span class="room-check-ownerbadge ' + meta.owner + '">' + (meta.owner === 'cast' ? 'キャスト' : (meta.owner === 'staffOnly' ? '内勤専用' : '内勤')) + '</span>';
+    html += '</div>';
+    return html;
+  }
+
   function toggleRoomChecklist(idx){
     var el = document.getElementById('roomChecklist' + idx);
     el.classList.toggle('show');
   }
 
-  function toggleStaffChecklist(roomId, key, done){
+  function toggleStaffChecklist(roomId, key, done, iconEl){
+    // 楽観的更新：即座に見た目を変える
+    var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
+    var prevState = room && room.checklist[key] ? room.checklist[key].done : false;
+    if(room){
+      room.checklist[key] = { done: done, at: done ? new Date().toISOString() : '' };
+    }
+
+    if(iconEl){
+      iconEl.className = 'room-check-icon clickable ' + (done ? 'done' : 'pending');
+      iconEl.textContent = done ? '✓' : '';
+      iconEl.setAttribute('onclick', "toggleStaffChecklist('" + roomId + "','" + key + "'," + (!done) + ", this)");
+      var labelEl = iconEl.nextElementSibling;
+      if(labelEl){
+        labelEl.className = 'room-check-label' + (done ? ' done' : '');
+      }
+    }
+
     fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: true, token: savedToken })
@@ -444,12 +567,69 @@
       .then(function(res){ return res.json(); })
       .then(function(result){
         if(result.error){
+          if(room) room.checklist[key] = { done: prevState, at: '' };
           alert('更新に失敗しました：' + result.error);
+          loadRooms();
           return;
         }
-        loadRooms();
+        // 成功時はバックグラウンドで一覧を静かに更新（進捗バーの数字などを合わせるため）
+        loadRoomsQuietly();
       })
-      .catch(function(){ alert('通信エラーが発生しました'); });
+      .catch(function(){
+        if(room) room.checklist[key] = { done: prevState, at: '' };
+        alert('通信エラーが発生しました');
+        loadRooms();
+      });
+  }
+
+  function loadRoomsQuietly(){
+    fetch(GAS_URL + '?action=listRooms&token=' + encodeURIComponent(savedToken))
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(data.error) return;
+        globalChecklistMeta = data.checklistMeta || {};
+        lastRoomsData = data.rooms || [];
+        // 開いているチェックリストの展開状態を保持したまま再描画
+        var openIndexes = [];
+        document.querySelectorAll('.room-checklist.show').forEach(function(el){
+          openIndexes.push(el.id.replace('roomChecklist', ''));
+        });
+        renderRoomList(data.rooms);
+        openIndexes.forEach(function(idx){
+          var el = document.getElementById('roomChecklist' + idx);
+          if(el) el.classList.add('show');
+        });
+      })
+      .catch(function(){});
+  }
+
+  function sendComment(roomId, idx){
+    var input = document.getElementById('commentInput' + idx);
+    var text = input.value.trim();
+    if(!text) return;
+
+    input.value = '';
+    input.disabled = true;
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addComment', id: roomId, text: text, author: '内勤', token: savedToken })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        input.disabled = false;
+        if(result.error){
+          alert('コメントの送信に失敗しました');
+          input.value = text;
+          return;
+        }
+        loadRoomsQuietly();
+      })
+      .catch(function(){
+        input.disabled = false;
+        alert('通信エラーが発生しました');
+        input.value = text;
+      });
   }
 
   function copyRoomUrl(url, btn){

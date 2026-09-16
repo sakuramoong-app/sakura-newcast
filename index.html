@@ -152,6 +152,8 @@
   }
   .check-icon.done{ background:var(--mint); color:#fff; }
   .check-icon.pending{ background:#eee; color:#bbb; }
+  .check-icon.clickable{ cursor:pointer; transition:transform .1s ease; }
+  .check-icon.clickable:active{ transform:scale(0.85); }
   .check-label{ font-size:13.5px; flex:1; }
   .check-label.done{ color:var(--sub); text-decoration:line-through; text-decoration-color:#ddd; }
   .check-toggle{
@@ -227,6 +229,16 @@
   .choice-btn.selected{ border-color:var(--pink); background:var(--pink-soft); color:var(--ink); }
   .sub-choice{ margin-top:10px; }
   .sub-choice-label{ font-size:12px; color:var(--sub); margin-bottom:6px; }
+  .self-choice-note{
+    font-size:11px;
+    color:#c9556a;
+    background:var(--pink-soft);
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:99px;
+    margin-bottom:8px;
+    font-weight:700;
+  }
 
   .save-note{
     font-size:11px; color:var(--mint);
@@ -321,11 +333,13 @@
       var state = data.checklist[key] || { done: false };
       var isCast = meta.owner === 'cast';
       html += '<div class="check-item">';
-      html += '<div class="check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
-      html += '<div class="check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
       if(isCast){
-        html += '<button class="check-toggle" onclick="toggleChecklist(\'' + key + '\',' + (!state.done) + ')">' + (state.done ? '取消す' : '完了') + '</button>';
+        html += '<div class="check-icon ' + (state.done ? 'done' : 'pending') + ' clickable" onclick="toggleChecklist(\'' + key + '\',' + (!state.done) + ', this)">' + (state.done ? '✓' : '') + '</div>';
       } else {
+        html += '<div class="check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
+      }
+      html += '<div class="check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
+      if(!isCast){
         html += '<span class="check-staff-badge">店舗確認</span>';
       }
       html += '</div>';
@@ -356,6 +370,7 @@
     var banner = data.bannerChoice || {};
     html += '<div class="section alt">';
     html += '<div class="section-title">新人バナーについて</div>';
+    html += '<div class="self-choice-note">この項目はキャストさんご自身で選択お願いいたします</div>';
     html += '<p style="font-size:12.5px;color:var(--sub);">作成すると、お客様に見つけてもらいやすくなります。作成する場合、在籍開始まで約2週間、作成しない場合は約1週間弱かかります。</p>';
     html += '<div class="choice-row">';
     html += '<button class="choice-btn ' + (banner.wantBanner === true ? 'selected' : '') + '" onclick="setBanner(true)">作成する</button>';
@@ -367,6 +382,7 @@
     var kit = data.kitChoice || {};
     html += '<div class="section alt">';
     html += '<div class="section-title">お仕事セットについて</div>';
+    html += '<div class="self-choice-note">この項目はキャストさんご自身で選択お願いいたします</div>';
     html += '<p style="font-size:12.5px;color:var(--sub);">ローション・うがい薬ボトル・ポーチは、事務所のものを使うか、ご自身で用意するか選べます。事務所のものを使う場合は買取500円（中身の補充は無料）です。</p>';
     html += '<div class="choice-row">';
     html += '<button class="choice-btn ' + (kit.type === 'shop' ? 'selected' : '') + '" onclick="setKit(\'shop\')">事務所で買う（500円）</button>';
@@ -378,6 +394,7 @@
     var wig = data.wigChoice || {};
     html += '<div class="section alt2">';
     html += '<div class="section-title">ウィッグ・ヘアスタイルについて</div>';
+    html += '<div class="self-choice-note">この項目はキャストさんご自身で選択お願いいたします</div>';
     html += '<div class="choice-row">';
     html += '<button class="choice-btn ' + (wig.type === 'wig' ? 'selected' : '') + '" onclick="setWig(\'wig\')">ウィッグを使う</button>';
     html += '<button class="choice-btn ' + (wig.type === 'jimoto' ? 'selected' : '') + '" onclick="setWig(\'jimoto\')">地毛で出勤する</button>';
@@ -421,7 +438,24 @@
     document.getElementById('app').innerHTML = html;
   }
 
-  function toggleChecklist(key, done){
+  function toggleChecklist(key, done, iconEl){
+    // 楽観的更新：まず見た目を即座に変える
+    var prevState = currentData.checklist[key] ? currentData.checklist[key].done : false;
+    currentData.checklist[key] = { done: done, at: done ? new Date().toISOString() : '' };
+
+    if(iconEl){
+      iconEl.className = 'check-icon clickable ' + (done ? 'done' : 'pending');
+      iconEl.textContent = done ? '✓' : '';
+      iconEl.setAttribute('onclick', "toggleChecklist('" + key + "'," + (!done) + ", this)");
+      var labelEl = iconEl.nextElementSibling;
+      if(labelEl){
+        labelEl.className = 'check-label' + (done ? ' done' : '');
+      }
+    }
+
+    // 進捗バーも即座に更新
+    updateProgressBarOnly();
+
     fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: false })
@@ -429,13 +463,29 @@
       .then(function(res){ return res.json(); })
       .then(function(result){
         if(result.error){
+          // 失敗時は元に戻す
+          currentData.checklist[key] = { done: prevState, at: '' };
+          renderRoom(currentData);
           alert('更新に失敗しました');
           return;
         }
         currentData.checklist = result.checklist;
-        renderRoom(currentData);
       })
-      .catch(function(){ alert('通信エラーが発生しました'); });
+      .catch(function(){
+        currentData.checklist[key] = { done: prevState, at: '' };
+        renderRoom(currentData);
+        alert('通信エラーが発生しました');
+      });
+  }
+
+  function updateProgressBarOnly(){
+    var items = Object.keys(currentData.checklistMeta);
+    var doneCount = items.filter(function(k){ return currentData.checklist[k] && currentData.checklist[k].done; }).length;
+    var pct = Math.round(doneCount / items.length * 100);
+    var fillEl = document.querySelector('.progress-fill');
+    var labelEl = document.querySelector('.progress-label');
+    if(fillEl) fillEl.style.width = pct + '%';
+    if(labelEl) labelEl.textContent = doneCount + ' / ' + items.length + ' 完了';
   }
 
   function handleCostumeUpload(slot, input){
