@@ -131,6 +131,62 @@
   }
   .btn-copy{ background:var(--lav-soft); color:#6c5896; }
   .btn-close{ background:#FDEDF0; color:#c9556a; }
+  .btn-toggle-checklist{ background:var(--mint-soft); color:#2c5b45; }
+
+  .room-progress-track{
+    height:7px;
+    background:#F0E8E6;
+    border-radius:99px;
+    overflow:hidden;
+    margin-bottom:8px;
+  }
+  .room-progress-fill{
+    height:100%;
+    background:linear-gradient(90deg, var(--pink), #F0AA6E);
+    border-radius:99px;
+  }
+  .room-checklist{
+    display:none;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid #F0E8E6;
+  }
+  .room-checklist.show{ display:block; }
+  .room-check-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 0;
+  }
+  .room-check-icon{
+    width:18px; height:18px;
+    border-radius:50%;
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px;
+  }
+  .room-check-icon.done{ background:var(--mint); color:#fff; }
+  .room-check-icon.pending{ background:#eee; color:#bbb; }
+  .room-check-label{ font-size:12.5px; flex:1; color:var(--ink); }
+  .room-check-label.done{ color:var(--sub); text-decoration:line-through; text-decoration-color:#ddd; }
+  .room-check-ownerbadge{
+    font-size:9.5px;
+    padding:1px 7px;
+    border-radius:99px;
+    flex-shrink:0;
+  }
+  .room-check-ownerbadge.cast{ background:var(--lav-soft); color:#6c5896; }
+  .room-check-ownerbadge.staff{ background:var(--pink-soft); color:#c9556a; }
+  .room-check-staff-toggle{
+    font-size:10.5px;
+    color:#fff;
+    background:var(--pink);
+    border:none;
+    border-radius:99px;
+    padding:4px 10px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
 
   .badge{
     display:inline-block;
@@ -182,7 +238,10 @@
     </div>
 
     <label>本指名バック（円）</label>
-    <input type="number" id="newBh" placeholder="1000">
+    <div class="row2">
+      <div><label style="margin:0 0 4px;">60分</label><input type="number" id="newBh60" placeholder="500"></div>
+      <div><label style="margin:0 0 4px;">90分</label><input type="number" id="newBh90" placeholder="1000"></div>
+    </div>
 
     <button class="btn" id="createBtn" onclick="createRoom()">ルームを作成</button>
 
@@ -231,7 +290,8 @@
       back60: document.getElementById('newB60').value.trim(),
       back90: document.getElementById('newB90').value.trim(),
       back120: document.getElementById('newB120').value.trim(),
-      backHonshimei: document.getElementById('newBh').value.trim()
+      backHonshimei60: document.getElementById('newBh60').value.trim(),
+      backHonshimei90: document.getElementById('newBh90').value.trim()
     };
 
     var btn = document.getElementById('createBtn');
@@ -261,7 +321,8 @@
         document.getElementById('newB60').value = '';
         document.getElementById('newB90').value = '';
         document.getElementById('newB120').value = '';
-        document.getElementById('newBh').value = '';
+        document.getElementById('newBh60').value = '';
+        document.getElementById('newBh90').value = '';
 
         loadRooms();
       })
@@ -300,6 +361,8 @@
     document.body.removeChild(temp);
   }
 
+  var globalChecklistMeta = {};
+
   function loadRooms(){
     fetch(GAS_URL + '?action=listRooms&token=' + encodeURIComponent(savedToken))
       .then(function(res){ return res.json(); })
@@ -308,6 +371,7 @@
           document.getElementById('roomList').innerHTML = '<div class="empty">読み込みに失敗しました：' + data.error + '</div>';
           return;
         }
+        globalChecklistMeta = data.checklistMeta || {};
         renderRoomList(data.rooms);
       })
       .catch(function(){
@@ -322,25 +386,70 @@
     }
 
     var baseUrl = window.location.href.replace('staff.html', 'index.html').split('?')[0];
+    var metaKeys = Object.keys(globalChecklistMeta);
 
     var html = '';
-    rooms.forEach(function(room){
+    rooms.forEach(function(room, idx){
       var isClosed = room.status !== 'active';
       var url = baseUrl + '?id=' + room.roomId;
+      var checklist = room.checklist || {};
+      var doneCount = metaKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
+      var pct = metaKeys.length ? Math.round(doneCount / metaKeys.length * 100) : 0;
+
       html += '<div class="room-item' + (isClosed ? ' closed' : '') + '">';
       html += '<div class="room-name">' + escapeHtml(room.castName || '（名称未設定）') +
         '<span class="badge ' + (isClosed ? 'closed' : 'active') + '">' + (isClosed ? '終了済み' : '稼働中') + '</span></div>';
-      html += '<div class="room-meta">作成：' + formatDate(room.createdAt) + (isClosed ? ' ／ 終了：' + formatDate(room.closedAt) : '') + '</div>';
+      html += '<div class="room-meta">作成：' + formatDate(room.createdAt) + (isClosed ? ' ／ 終了：' + formatDate(room.closedAt) : '') + '　／　進捗 ' + doneCount + '/' + metaKeys.length + '</div>';
+      html += '<div class="room-progress-track"><div class="room-progress-fill" style="width:' + pct + '%;"></div></div>';
+
       html += '<div class="room-actions">';
       html += '<button class="btn-copy" onclick="copyRoomUrl(\'' + url + '\', this)">URLをコピー</button>';
+      html += '<button class="btn-toggle-checklist" onclick="toggleRoomChecklist(' + idx + ')">やることリスト</button>';
       if(!isClosed){
         html += '<button class="btn-close" onclick="closeRoom(\'' + room.roomId + '\')">終了する</button>';
       }
       html += '</div>';
+
+      html += '<div class="room-checklist" id="roomChecklist' + idx + '">';
+      metaKeys.forEach(function(key){
+        var meta = globalChecklistMeta[key];
+        var state = checklist[key] || { done: false };
+        html += '<div class="room-check-item">';
+        html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
+        html += '<div class="room-check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
+        html += '<span class="room-check-ownerbadge ' + meta.owner + '">' + (meta.owner === 'cast' ? 'キャスト' : '内勤') + '</span>';
+        if(meta.owner === 'staff' && !isClosed){
+          html += '<button class="room-check-staff-toggle" onclick="toggleStaffChecklist(\'' + room.roomId + '\',\'' + key + '\',' + (!state.done) + ')">' + (state.done ? '取消' : '完了') + '</button>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+
       html += '</div>';
     });
 
     document.getElementById('roomList').innerHTML = html;
+  }
+
+  function toggleRoomChecklist(idx){
+    var el = document.getElementById('roomChecklist' + idx);
+    el.classList.toggle('show');
+  }
+
+  function toggleStaffChecklist(roomId, key, done){
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: true, token: savedToken })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          alert('更新に失敗しました：' + result.error);
+          return;
+        }
+        loadRooms();
+      })
+      .catch(function(){ alert('通信エラーが発生しました'); });
   }
 
   function copyRoomUrl(url, btn){

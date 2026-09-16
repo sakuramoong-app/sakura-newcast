@@ -59,6 +59,8 @@
     padding:16px 18px;
     box-shadow:0 3px 12px rgba(217,160,180,.14);
   }
+  .section.alt{ background:var(--lav-soft); }
+  .section.alt2{ background:var(--mint-soft); }
   .section.alt3{ background:var(--pink-soft); }
   .section-title{ font-size:16px; font-weight:800; margin-bottom:10px; }
 
@@ -109,6 +111,128 @@
     margin-top:24px;
     padding:10px;
   }
+
+  /* 進捗バー */
+  .progress-wrap{ margin-bottom:8px; }
+  .progress-track{
+    height:12px;
+    background:#F5E3E6;
+    border-radius:99px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    background:linear-gradient(90deg, var(--pink), #F0AA6E);
+    border-radius:99px;
+    transition:width .3s ease;
+  }
+  .progress-label{
+    font-size:11.5px;
+    color:var(--sub);
+    margin-top:6px;
+    text-align:right;
+  }
+
+  /* チェックリスト */
+  .check-item{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:9px 0;
+    border-bottom:1px solid #F0E8E6;
+  }
+  .check-item:last-child{ border-bottom:none; }
+  .check-icon{
+    width:22px; height:22px;
+    border-radius:50%;
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px;
+    margin-top:1px;
+  }
+  .check-icon.done{ background:var(--mint); color:#fff; }
+  .check-icon.pending{ background:#eee; color:#bbb; }
+  .check-label{ font-size:13.5px; flex:1; }
+  .check-label.done{ color:var(--sub); text-decoration:line-through; text-decoration-color:#ddd; }
+  .check-toggle{
+    font-size:11px;
+    color:var(--pink);
+    font-weight:700;
+    background:var(--pink-soft);
+    border:none;
+    border-radius:99px;
+    padding:5px 12px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .check-toggle:disabled{ opacity:0.4; cursor:default; }
+  .check-staff-badge{
+    font-size:10px;
+    color:#9C8B8F;
+    background:#eee;
+    border-radius:99px;
+    padding:2px 8px;
+    flex-shrink:0;
+  }
+
+  /* 衣装アップロード */
+  .costume-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px;
+    margin-top:10px;
+  }
+  .costume-slot{
+    aspect-ratio:3/4;
+    border-radius:12px;
+    background:#fff;
+    border:2px dashed #F0C6CE;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:5px;
+    cursor:pointer;
+    overflow:hidden;
+    position:relative;
+  }
+  .costume-slot img{
+    width:100%; height:100%;
+    object-fit:cover;
+  }
+  .costume-slot .plus{ font-size:24px; color:var(--pink); }
+  .costume-slot .txt{ font-size:10.5px; color:var(--sub); }
+  .costume-slot input[type=file]{ display:none; }
+  .costume-slot .uploading{
+    position:absolute; inset:0;
+    background:rgba(255,255,255,.85);
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; color:var(--pink); font-weight:700;
+  }
+
+  /* ウィッグ/地毛選択 */
+  .choice-row{ display:flex; gap:10px; margin-top:8px; }
+  .choice-btn{
+    flex:1;
+    padding:11px;
+    border-radius:12px;
+    border:2px solid #eee;
+    background:#fff;
+    font-family:inherit;
+    font-size:13.5px;
+    font-weight:700;
+    color:var(--sub);
+    cursor:pointer;
+  }
+  .choice-btn.selected{ border-color:var(--pink); background:var(--pink-soft); color:var(--ink); }
+  .sub-choice{ margin-top:10px; }
+  .sub-choice-label{ font-size:12px; color:var(--sub); margin-bottom:6px; }
+
+  .save-note{
+    font-size:11px; color:var(--mint);
+    margin-top:6px;
+    height:14px;
+  }
 </style>
 </head>
 <body>
@@ -122,6 +246,8 @@
 
 <script>
   var GAS_URL = 'https://script.google.com/macros/s/AKfycbxKWQsxsX2SJ0cZ7YfxZJgW1ujmM8xRvrNcjcDYpohI6Gqkem1BhiqVO0PcU8KjjMnf/exec';
+  var roomId = null;
+  var currentData = null;
 
   function getParam(name){
     var params = new URLSearchParams(window.location.search);
@@ -136,6 +262,37 @@
       '</div>';
   }
 
+  function formatYen(v){
+    if(!v && v !== 0) return '未定';
+    return Number(v).toLocaleString() + '円';
+  }
+
+  function escapeHtml(str){
+    var div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function loadRoom(){
+    fetch(GAS_URL + '?action=getRoom&id=' + encodeURIComponent(roomId))
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(data.error === 'not_found'){
+          renderError('このページは見つかりませんでした。URLをご確認ください。');
+        } else if(data.error === 'closed'){
+          renderError('このページはすでに閉鎖されています。ご不明な点は店舗までご確認ください。');
+        } else if(data.error){
+          renderError('読み込みに失敗しました。時間をおいて再度お試しください。');
+        } else {
+          currentData = data;
+          renderRoom(data);
+        }
+      })
+      .catch(function(){
+        renderError('読み込みに失敗しました。通信環境をご確認のうえ、再度お試しください。');
+      });
+  }
+
   function renderRoom(data){
     var html = '';
     html += '<div class="header">';
@@ -145,6 +302,77 @@
     html += '<p class="lead">面接時にご説明した内容をまとめました。わからないことがあれば、いつでも店舗までご質問ください。</p>';
     html += '</div>';
 
+    // 進捗バー
+    var items = Object.keys(data.checklistMeta);
+    var doneCount = items.filter(function(k){ return data.checklist[k] && data.checklist[k].done; }).length;
+    var pct = Math.round(doneCount / items.length * 100);
+
+    html += '<div class="section">';
+    html += '<div class="section-title">準備の進み具合</div>';
+    html += '<div class="progress-wrap"><div class="progress-track"><div class="progress-fill" style="width:' + pct + '%;"></div></div></div>';
+    html += '<div class="progress-label">' + doneCount + ' / ' + items.length + ' 完了</div>';
+    html += '</div>';
+
+    // チェックリスト
+    html += '<div class="section alt">';
+    html += '<div class="section-title">やることリスト</div>';
+    items.forEach(function(key){
+      var meta = data.checklistMeta[key];
+      var state = data.checklist[key] || { done: false };
+      var isCast = meta.owner === 'cast';
+      html += '<div class="check-item">';
+      html += '<div class="check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
+      html += '<div class="check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
+      if(isCast){
+        html += '<button class="check-toggle" onclick="toggleChecklist(\'' + key + '\',' + (!state.done) + ')">' + (state.done ? '取消す' : '完了') + '</button>';
+      } else {
+        html += '<span class="check-staff-badge">店舗確認</span>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // 衣装アップロード
+    var urls = data.costumeUrls || ['', '', ''];
+    html += '<div class="section alt3">';
+    html += '<div class="section-title">衣装の写真</div>';
+    html += '<p style="font-size:12.5px;color:var(--sub);">衣装の候補を3着まで送れます。タップして写真を選んでください。</p>';
+    html += '<div class="costume-grid">';
+    for(var i=0;i<3;i++){
+      var url = urls[i] || '';
+      html += '<label class="costume-slot" id="costumeSlot' + i + '">';
+      if(url){
+        html += '<img src="' + url + '" alt="衣装' + (i+1) + '">';
+      } else {
+        html += '<span class="plus">＋</span><span class="txt">' + (i+1) + '着目</span>';
+      }
+      html += '<input type="file" accept="image/*" onchange="handleCostumeUpload(' + i + ', this)">';
+      html += '</label>';
+    }
+    html += '</div>';
+    html += '</div>';
+
+    // ウィッグ/地毛
+    var wig = data.wigChoice || {};
+    html += '<div class="section alt2">';
+    html += '<div class="section-title">ウィッグ・ヘアスタイルについて</div>';
+    html += '<div class="choice-row">';
+    html += '<button class="choice-btn ' + (wig.type === 'wig' ? 'selected' : '') + '" onclick="setWig(\'wig\')">ウィッグを使う</button>';
+    html += '<button class="choice-btn ' + (wig.type === 'jimoto' ? 'selected' : '') + '" onclick="setWig(\'jimoto\')">地毛で出勤する</button>';
+    html += '</div>';
+    if(wig.type === 'jimoto'){
+      html += '<div class="sub-choice">';
+      html += '<div class="sub-choice-label">ヘアメイクに行きますか？</div>';
+      html += '<div class="choice-row">';
+      html += '<button class="choice-btn ' + (wig.hairMake === true ? 'selected' : '') + '" onclick="setHairMake(true)">行く</button>';
+      html += '<button class="choice-btn ' + (wig.hairMake === false ? 'selected' : '') + '" onclick="setHairMake(false)">行かない</button>';
+      html += '</div>';
+      html += '</div>';
+    }
+    html += '<div class="save-note" id="wigSaveNote"></div>';
+    html += '</div>';
+
+    // バック
     html += '<div class="section alt3">';
     html += '<div class="section-title">バックについて</div>';
     html += '<table class="back-table">';
@@ -171,40 +399,99 @@
     document.getElementById('app').innerHTML = html;
   }
 
-  function formatYen(v){
-    if(!v && v !== 0) return '未定';
-    return Number(v).toLocaleString() + '円';
+  function toggleChecklist(key, done){
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: false })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          alert('更新に失敗しました');
+          return;
+        }
+        currentData.checklist = result.checklist;
+        renderRoom(currentData);
+      })
+      .catch(function(){ alert('通信エラーが発生しました'); });
   }
 
-  function escapeHtml(str){
-    var div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+  function handleCostumeUpload(slot, input){
+    var file = input.files[0];
+    if(!file) return;
+
+    var slotEl = document.getElementById('costumeSlot' + slot);
+    var loadingDiv = document.createElement('div');
+    loadingDiv.className = 'uploading';
+    loadingDiv.textContent = 'アップロード中...';
+    slotEl.appendChild(loadingDiv);
+
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var base64 = e.target.result.split(',')[1];
+      fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'uploadCostume',
+          id: roomId,
+          slot: slot,
+          imageBase64: base64,
+          mimeType: file.type
+        })
+      })
+        .then(function(res){ return res.json(); })
+        .then(function(result){
+          if(result.error){
+            alert('アップロードに失敗しました');
+            loadRoom();
+            return;
+          }
+          currentData.costumeUrls = result.costumeUrls;
+          currentData.checklist = result.checklist;
+          renderRoom(currentData);
+        })
+        .catch(function(){
+          alert('通信エラーが発生しました');
+          loadRoom();
+        });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function setWig(type){
+    var hairMake = (currentData.wigChoice && currentData.wigChoice.hairMake !== undefined) ? currentData.wigChoice.hairMake : null;
+    if(type !== 'jimoto') hairMake = null;
+    saveWigChoice(type, hairMake);
+  }
+
+  function setHairMake(value){
+    saveWigChoice('jimoto', value);
+  }
+
+  function saveWigChoice(type, hairMake){
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setWigChoice', id: roomId, type: type, hairMake: hairMake })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          alert('保存に失敗しました');
+          return;
+        }
+        currentData.wigChoice = result.wigChoice;
+        renderRoom(currentData);
+      })
+      .catch(function(){ alert('通信エラーが発生しました'); });
   }
 
   (function(){
-    var roomId = getParam('id');
+    roomId = getParam('id');
     if(!roomId){
       renderError('URLが正しくありません。お手数ですが、送られたリンクをそのままお使いください。');
       return;
     }
-
-    fetch(GAS_URL + '?action=getRoom&id=' + encodeURIComponent(roomId))
-      .then(function(res){ return res.json(); })
-      .then(function(data){
-        if(data.error === 'not_found'){
-          renderError('このページは見つかりませんでした。URLをご確認ください。');
-        } else if(data.error === 'closed'){
-          renderError('このページはすでに閉鎖されています。ご不明な点は店舗までご確認ください。');
-        } else if(data.error){
-          renderError('読み込みに失敗しました。時間をおいて再度お試しください。');
-        } else {
-          renderRoom(data);
-        }
-      })
-      .catch(function(){
-        renderError('読み込みに失敗しました。通信環境をご確認のうえ、再度お試しください。');
-      });
+    loadRoom();
   })();
 </script>
 
