@@ -291,6 +291,86 @@
     text-decoration:none;
     margin-top:8px;
   }
+
+  .tab-menu{
+    display:flex;
+    gap:6px;
+    margin-bottom:18px;
+    background:#fff;
+    padding:5px;
+    border-radius:14px;
+    box-shadow:0 3px 12px rgba(217,160,180,.14);
+    position:sticky;
+    top:8px;
+    z-index:10;
+  }
+  .tab-btn{
+    flex:1;
+    border:none;
+    background:transparent;
+    color:var(--sub);
+    font-family:inherit;
+    font-weight:700;
+    font-size:12.5px;
+    padding:10px 4px;
+    border-radius:10px;
+    cursor:pointer;
+  }
+  .tab-btn.active{
+    background:var(--pink);
+    color:#fff;
+  }
+
+  .read-check-section{ text-align:center; }
+  .read-check-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    background:#fff;
+    border-radius:14px;
+    padding:16px;
+    cursor:pointer;
+  }
+  .read-check-icon{
+    width:28px; height:28px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px;
+    flex-shrink:0;
+  }
+  .read-check-icon.done{ background:var(--mint); color:#fff; }
+  .read-check-icon.pending{ background:#eee; color:#bbb; }
+  .read-check-label{ font-size:14px; font-weight:700; color:var(--ink); }
+
+  .memo-textarea{
+    width:100%;
+    min-height:110px;
+    padding:11px 13px;
+    border:1.5px solid #eee;
+    border-radius:12px;
+    font-size:13.5px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+    resize:vertical;
+    margin-top:8px;
+  }
+  .memo-textarea:focus{ outline:none; border-color:var(--pink); }
+  .memo-save-btn{
+    display:block;
+    width:100%;
+    border:none;
+    background:var(--pink);
+    color:#fff;
+    font-family:inherit;
+    font-weight:800;
+    font-size:13.5px;
+    padding:11px;
+    border-radius:11px;
+    cursor:pointer;
+    margin-top:8px;
+  }
 </style>
 </head>
 <body>
@@ -306,6 +386,7 @@
   var GAS_URL = 'https://script.google.com/macros/s/AKfycbxKWQsxsX2SJ0cZ7YfxZJgW1ujmM8xRvrNcjcDYpohI6Gqkem1BhiqVO0PcU8KjjMnf/exec';
   var roomId = null;
   var currentData = null;
+  var currentTab = 'progress';
 
   function getParam(name){
     var params = new URLSearchParams(window.location.search);
@@ -359,6 +440,41 @@
     html += '<p class="to">キャスト名：<strong>' + escapeHtml(data.castName) + '</strong> 様</p>';
     html += '<p class="lead">面接時にご説明した内容をまとめました。わからないことがあれば、いつでも店舗までご質問ください。</p>';
     html += '</div>';
+
+    // タブメニュー
+    html += '<div class="tab-menu">';
+    html += '<button class="tab-btn' + (currentTab === 'progress' ? ' active' : '') + '" onclick="switchTab(\'progress\')">バック・進捗</button>';
+    html += '<button class="tab-btn' + (currentTab === 'guide' ? ' active' : '') + '" onclick="switchTab(\'guide\')">新人ガイド</button>';
+    html += '<button class="tab-btn' + (currentTab === 'roadmap' ? ' active' : '') + '" onclick="switchTab(\'roadmap\')">姫デコロードマップ</button>';
+    html += '</div>';
+
+    html += '<div id="tabContent"></div>';
+
+    document.getElementById('app').innerHTML = html;
+    renderTabContent();
+  }
+
+  function switchTab(tab){
+    currentTab = tab;
+    renderRoom(currentData);
+    window.scrollTo(0, 0);
+  }
+
+  function renderTabContent(){
+    var html = '';
+    if(currentTab === 'progress'){
+      html = renderTabProgress(currentData);
+    } else if(currentTab === 'guide'){
+      html = renderTabGuide(currentData);
+    } else if(currentTab === 'roadmap'){
+      html = renderTabRoadmap(currentData);
+    }
+    html += '<div class="closing-note">※このページは在籍作成が完了次第、予告なく閉鎖します。</div>';
+    document.getElementById('tabContent').innerHTML = html;
+  }
+
+  function renderTabProgress(data){
+    var html = '';
 
     // 進捗バー
     var items = Object.keys(data.checklistMeta);
@@ -472,11 +588,6 @@
     html += '</ul>';
     html += '</div>';
 
-    html += '<div class="section">';
-    html += '<div class="section-title">新人ガイド</div>';
-    html += '<p style="font-size:13.5px;color:var(--sub);">お仕事の流れ・順守事項・お仕事セットなどの詳細は、面接時にお渡しした「新人ガイド」をご参照ください。</p>';
-    html += '</div>';
-
     // メールアドレス
     html += '<div class="section alt">';
     html += '<div class="section-title">メールアドレス</div>';
@@ -495,9 +606,372 @@
     html += '<a class="profile-link-btn" href="https://sakuramoong-app.github.io/cast-sakura-profile/" target="_blank">プロフィール入力フォームを開く</a>';
     html += '</div>';
 
-    html += '<div class="closing-note">※このページは在籍作成が完了次第、予告なく閉鎖します。</div>';
+    return html;
+  }
 
-    document.getElementById('app').innerHTML = html;
+  function renderTabGuide(data){
+    var guideRead = !!data.guideRead;
+    var html = `
+<div class="section">
+  <div class="section-title">初出勤までの流れ</div>
+  <div class="flow">
+    <span class="step">面接OK</span><span class="arrow">→</span>
+    <span class="step">業務委託契約書サイン</span><span class="arrow">→</span>
+    <span class="step">撮影用衣装・靴 用意</span><span class="arrow">→</span>
+    <span class="step">スタジオ撮影（必須）</span><span class="arrow">→</span>
+    <span class="step">新人バナー作成（希望者のみ）</span><span class="arrow">→</span>
+    <span class="step">シフト提出</span><span class="arrow">→</span>
+    <span class="step">在籍完成</span><span class="arrow">→</span>
+    <span class="step">初出勤</span>
+  </div>
+  <p>スタジオ撮影は必須で、自撮りでの在籍写真は不可となります。新人バナーは、このスタジオ撮影の写真素材を使用して作成します。</p>
+  <p><strong>新人バナー</strong>を作成するかどうかは、ご本人に選んでいただいています（「バック・進捗」タブでご回答ください）。作成すると、お客様に見つけてもらいやすくなります。作成される場合、撮影後<strong>約2週間</strong>で在籍開始となります（作成されない場合は撮影後<strong>約1週間弱</strong>で在籍開始）。</p>
+</div>
+
+<div class="section alt2">
+  <div class="section-title">スタジオ撮影のご準備について</div>
+  <p>この後、スタジオ撮影のための<strong>衣装・靴・ウィッグ（地毛で出勤しない方）</strong>の候補をLINEへお送りください。<br>
+  ※購入される場合は、必ず購入候補のスクリーンショットをお送りください。</p>
+
+  <p><strong>衣装について</strong></p>
+  <ul>
+    <li>私服・下着・ランジェリーやセクシー系から<strong>最大3着（最低2着）</strong>ご用意ください</li>
+    <li>私服1着と下着1着は必須です</li>
+    <li>+1着は、違う下着や私服、ランジェリー等のセクシー系からお選びください</li>
+    <li>黒を避けて、なるべく明るい色を選んでください</li>
+    <li>私服はスカートであること</li>
+    <li>パンツのおしりの部分は全面布ではなく、レースやTバックのものでお願いします（全面布の場合、撮影するともったり見えてしまうため）</li>
+  </ul>
+
+  <p><strong>ウィッグについて</strong></p>
+  <ul>
+    <li>自然な毛質で、ショートよりセミロング〜ロングがおすすめです</li>
+    <li>前髪はおろせるタイプがおすすめです</li>
+    <li>色は真っ黒だと浮いてしまうため、少し茶〜金髪までいかない明るめの茶色がおすすめです</li>
+  </ul>
+
+  <p><strong>ヘアスタイルについて</strong></p>
+  <ul>
+    <li>地毛の方はなるべくヘアメイクに行くことを推奨しています（撮影時、髪の毛はかなり重要です）</li>
+    <li>スタジオ付近にある美容室だと相場3,000円前後です</li>
+  </ul>
+
+  <p><strong>靴について</strong></p>
+  <ul>
+    <li>スタジオでは、外履きは靴底を拭けば撮影でも使用可能です</li>
+    <li>購入される場合、せっかくなのでお仕事でも使用することを視野に入れたものを購入するといいでしょう</li>
+    <li>少しヒールがあると女性らしい印象になります</li>
+    <li>ただしデリヘルという性質上、ヒールが高すぎると歩き疲れてしまうため、程よい高さのローヒール（ピンヒールは避ける）がおすすめです</li>
+    <li>色は何にでも合う無難な色（黒や白ベージュ系など）がおすすめです</li>
+  </ul>
+</div>
+
+<div class="section">
+  <div class="section-title">お仕事セットについて</div>
+  <p>お仕事セット：<br>ローション・うがい薬・指サック・M/Lゴム・浣腸・割引券2種・ポーチ</p>
+  <p>ポーチ、ローションボトル、うがい薬ボトルに関しては事務所で用意しているものをお使いいただくか、ご自身でご用意いただくか、<strong>ご本人に選んでいただいています</strong>（「バック・進捗」タブでご回答ください）。事務所用意のものをお使いの場合、買取500円（中身の補充は無料）となります。</p>
+</div>
+
+<div class="section alt">
+  <div class="section-title">登録・提出物について</div>
+  <ul>
+    <li>写メ日記ツールのご登録に、メールアドレスをお伺いしています（「バック・進捗」タブでご入力ください）。</li>
+    <li>在籍プロフィールは、専用の入力フォームからご登録いただきます。</li>
+    <li>シフトのご提出は、アプリから行っていただきます。</li>
+  </ul>
+</div>
+
+<div class="section alt">
+  <div class="section-title">初期の出勤について</div>
+  <ul>
+    <li>初日は<strong>金曜・土曜</strong>のいずれかで確定して出勤していただきます。最低6時間、ゴールデンタイムを含む時間帯でお願いしています。</li>
+    <li>入店から2週間は、金土を含めてシフトを組んでいただきます。</li>
+    <li>最初の2日間は、なるべくスタッフが付き添いをさせていただきます。</li>
+    <li>最初はお客様も1日最大2本までとし、時間帯は夕方〜22時前後に退勤がベストです。</li>
+  </ul>
+  <div class="note-box">
+    金土の出勤や最初のサポートについて、難しい場合はご相談ください。ただし、このタイミングでのサポートを受けていただくことが、新人期間の稼ぎやすさに直結します。サポートなしで進める場合は、稼ぎにくくなる可能性があることをご了承いただいたうえで、ご希望に沿って進めさせていただきます。
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">★お仕事の流れ★</div>
+  <p><strong>入室前の準備</strong><br>ホテルのお部屋に入る前に、身だしなみを確認しましょう。</p>
+  <ul class="prep-list">
+    <li>髪の毛やメイクが崩れていないか、手鏡でチェック</li>
+    <li>上着、帽子、マスクは入室前に外す</li>
+    <li>上着は裏側を表にして腕に掛ける</li>
+    <li>LINEのトーク画面やタイマーなど、必要なものをすぐ使えるよう準備しておく</li>
+  </ul>
+
+  <div class="flow-step"><span class="step-num">1</span><div class="fs-body">
+    <div class="fs-title">入室・ご挨拶</div>
+    <div>ドアをノックし、お客様に開けていただいてから入室します。靴をきれいに揃え、お客様の目を見て笑顔でご挨拶しましょう！ ※お客様の靴も揃えてあげると親切です◎</div>
+  </div></div>
+
+  <div class="flow-step"><span class="step-num">2</span><div class="fs-body">
+    <div class="fs-title">自己紹介・コース確認・料金受け取り</div>
+    <div>自己紹介をして、ご予約いただいているコース・料金を確認します。料金を受け取り、必要な場合はお釣りをお渡ししてください。自分のお財布とお客様からいただいた料金は必ず分けて管理し、貴重品は必ず目の届く場所に。お客様にも「安心して遊んでいただくため」とお伝えし、貴重品を目の届く場所で管理していただくようお願いしてください。</div>
+    <div style="margin-top:6px;"><strong>有料オプションの事前説明：</strong>射精・コスプレ・ごっくんなど、プレイ中に追加されがちな有料オプションは、このタイミングで「有料になります」と事前に伝えておくとスムーズです。お客様が希望される場合は、先にお金をいただきたいので、すぐに内勤へ連絡してください（NGオプションの場合は説明を省略して構いません）。事前に伝えておくと、プレイ中にお金の話をする気まずさがなくなります。</div>
+  </div></div>
+
+  <div class="flow-step"><span class="step-num">3</span><div class="fs-body">
+    <div class="fs-title">お店へインコール</div>
+    <div>料金を受け取ったら、「料金いただきました」とお店へインコールをしてください。LINEトークでの連絡でOKです。</div>
+  </div></div>
+
+  <div class="flow-step"><span class="step-num">4</span><div class="fs-body">
+    <div class="fs-title">タイマーをセット</div>
+    <div>コース終了の少し前に鳴るようセットします。例：90分コースなら終了15分前の「75分」でセット。※入室前にタイマー画面を準備しておくとスムーズです◎</div>
+  </div></div>
+
+  <div class="flow-step"><span class="step-num">5</span><div class="fs-body">
+    <div class="fs-title">シャワーへご案内</div>
+    <div>シャワー中にうがいもしていただきます。必要なプレイの場合は、シャワー前に浣腸をしてあげてください。脱いだ服は、手が空いたタイミングで畳んであげると◎</div>
+    <div style="margin-top:6px;"><strong>逆AFをする場合：</strong>浣腸はトイレで済ませ、うがい薬でうがいをしてからシャワーへ誘導します。服はたたみ、シャワーで身体を洗います。</div>
+    <div style="margin-top:6px;"><strong>湯船を使う場合：</strong>お湯をためるなら、料金をいただいた後のタイミングがおすすめです。お湯をためている間も、貴重品は肌身離さず持ち歩いてください。</div>
+  </div></div>
+
+  <div class="flow-step"><span class="step-num">6</span><div class="fs-body">
+    <div class="fs-title">ベッドでプレイスタート</div>
+    <div>プレイ中にお客様から有料オプションを希望された場合は、有料オプションであることを必ずお伝えし、了承をいただいたうえでお店へLINEで確認してください。お店から確認が取れてからオプションを行い、プレイ終了後に追加料金をいただいてください。</div>
+  </div></div>
+
+  <div class="flow-step"><span class="step-num">7</span><div class="fs-body">
+    <div class="fs-title">終了時間が近づいたら</div>
+    <div>タイマーが鳴ったら終了時間が近づいている合図です。お客様へお声がけしてシャワーへご案内してください。予定より早く終わった場合はマッサージやお話で残り時間を過ごしましょう。※お客様が早めに帰りたい場合はそのまま終了でOKです。</div>
+  </div></div>
+
+  <div>
+    <p style="margin-top:8px;"><strong>【退室後の注意】</strong></p>
+    <div class="warn-box">
+      お客様と一緒にホテルを退室し、駅などまで一緒になる場合は、その後に後をつけられないよう十分注意してください。特に待機場へ戻る場合は、待機場の場所を知られないように。少し遠回りをする／コンビニに立ち寄る／お客様と別れてから時間を空ける、など周囲を確認してから戻りましょう。自分の安全を最優先に行動してください。
+    </div>
+  </div>
+</div>
+
+<div class="section alt3">
+  <div class="section-title">昇給・降給</div>
+  <p><strong>お給料が上がる要素</strong><br>
+  当店ルール・勤怠ルールが守られている／本指名を一定数獲得している／週4,5でまとまった時間のシフトが出せている／その他責任者が評価した場合</p>
+  <p><strong>お給料が下がる要素</strong><br>
+  当店ルールが守られていない／お客様からクレームが出る／出発・準備に時間がかかる／出勤確認等の連絡がつかない／遅刻・早退・当日欠勤・シフト変更が多い</p>
+</div>
+
+<div class="section alt2">
+  <div class="section-title">交通費ルールについて</div>
+  <ol>
+    <li>自宅 ⇔ 待機場（池袋、鶯谷、五反田いずれも）… <strong>自己負担</strong></li>
+    <li>自宅 → 待機場以外の出張先 … 池袋を拠点として算出（<strong>算出が必要のためご申告ください</strong>）</li>
+    <li>待機場 → 仕事先（全待機場、出張）… <strong>店負担</strong></li>
+    <li>タクシー → 店からの指示があれば <strong>店負担</strong></li>
+  </ol>
+  <div class="note-box">
+    基本的に交通費は自己申告となるため、店から交通費・領収書の有無の確認は致しません。②に関してはご申告がない限り算出致しません。③④の店負担分も含め、交通費は一旦キャストが立替え、退勤時のお給料精算のタイミングで一緒に精算します。
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">雑費について</div>
+  <p>キャストが使用する備品や待機場の維持費、所得税への補填として、10,500円ごとに500円の雑費（上限3,000円）が発生いたします。</p>
+</div>
+
+<div class="section alt3">
+  <div class="section-title">勤務に係る順守事項</div>
+  <p><strong>最重要順守事項</strong></p>
+  <ol>
+    <li>各種法律、条令は遵守する事</li>
+    <li>弊社の営業活動に係る情報（顧客情報、キャスト情報）が外部に漏れないように徹底</li>
+    <li>会社の利益を阻害する行為はしない事</li>
+  </ol>
+  <p><strong>欠勤（休み）に関して</strong><br>
+  出来るだけ早く理由を連絡すること。シフトの提出後は責任を持ってこなしてください。変更や欠勤遅刻が多いとお店の判断で報酬の変更や、最悪の場合退店もありますのでご注意ください。</p>
+  <p><strong>禁止行為</strong></p>
+  <ul>
+    <li>無断欠勤／キャスト間での金銭の貸し借り／同業種での掛け持ち（応相談）／出稼ぎ</li>
+    <li>お店に知らせず移籍や事務所所属、AV出演（スカウトの話が来た時点で必ず報告）</li>
+    <li>裏引き行為（お店を通さずお客と会う行為）【罰金】</li>
+    <li>無断での他店への移籍／キャスト間の他店への斡旋【罰金】</li>
+    <li>一般的なマナー・モラルを逸脱した行為</li>
+  </ul>
+  <div class="note-box">
+    風俗も立派なお仕事です、一般常識をもって仕事に努めてください。場合によっては罰金を払って頂き退店とし、最悪の場合は管轄警察署へ営業妨害の報告を致します。
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">お仕事をするにあたり①：身だしなみ・準備・勤怠</div>
+  <p><strong>サービスと身だしなみ</strong><br>
+  お客様は安くはないお金を自分にむけて使ってくれています。体毛の処理・口臭等、身だしなみを怠らないよう気遣ってください。どうやったらお客様が喜んでくれるかを常に考え、おもてなしの心を持って接客しましょう。</p>
+  <p><strong>準備と移動</strong><br>
+  出勤したらいつお仕事が入ってもいいように準備を完了し、移動もできるだけ速やかに行ってください。</p>
+  <p><strong>勤怠について</strong><br>
+  シフトは決まり次第なるべく早く提出してください。シフトを出した以上、出勤予定時間までにメイク・準備を完了させて臨んでください。体調不良等仕方のないこともありますが、当日欠勤はできるだけないようにしてください。やむを得ず遅刻・欠勤する場合は速やかにお店に連絡してください。</p>
+</div>
+
+<div class="section alt">
+  <div class="section-title">お仕事をするにあたり②：プレイ時間・接客</div>
+  <p><strong>プレイ時間の遵守</strong><br>
+  コースの許容範囲は±5分です。時間をきっちりコントロールし、延長になりそうな場合は「これ以上は延長になります」とはっきり伝えましょう。お客様をお待たせするとホテル代の延長やお客様の予定を狂わせ、お店の信頼低下に直結します。オプションやコース変更がある場合は速やかにお店に連絡してください。</p>
+  <p><strong>接客するにあたっての注意点</strong><br>
+  プレイ中の飲酒は一切禁止です。お客様との連絡先交換は可能ですが、裏引き行為等が発覚した際は罰金の対象となります。飲酒の強要や連絡先交換の強要がしつこい場合は、「お店に確認します」とお伝えのうえ、接客中でもお店に電話してください。</p>
+</div>
+
+<div class="section alt2">
+  <div class="section-title">お仕事をするにあたり③：待機所・仲間・貴重品</div>
+  <ul>
+    <li><strong>待機所での過ごし方：</strong>みんなが使う場所です。使ったものは元に戻し、整理整頓に努めましょう。</li>
+    <li><strong>待機場での飲食：</strong>なるべくその日のうちに処理してください。冷蔵庫の使用が可能ですが、飲み物は日付と名前を書いて入れてください（1週間経過した場合破棄されます）。名前が書いていないものは破棄されてしまう可能性がありますのでご注意ください。</li>
+    <li><strong>喫煙について：</strong>待機場所によって喫煙場所が異なりますので、必ず画像でLINEにお送りする案内をご確認ください。喘息持ち等、体質的に煙が合わない子もいますので、必ずご配慮をお願いします。</li>
+    <li><strong>挨拶・他のキャストとのかかわり方：</strong>初めて会うキャストには必ず挨拶を。お給料の話やお店の悪口はキャスト同士でNG、不満は店長・内勤にお申し付けください。</li>
+    <li><strong>忘れ物：</strong>ローションやうがい液をホテルに忘れないよう、退室前に忘れ物チェックを日常化してください。</li>
+    <li><strong>貴重品の管理：</strong>基本的に自己責任です。預けたいものがある場合はお申し付けください。貴重品は肌身離さず必ず持ち歩きましょう。ホテル入室後、お客様といるときもです。ビニール製ポーチでお仕事セットと貴重品を一緒に入れて、お風呂やトイレに持ち歩けるようにしておくことを推奨しています。</li>
+  </ul>
+  <p><strong>退店時について</strong><br>
+  お店を辞める場合は必ずその旨をお店側に伝えてください。私物の返却や在籍写真の削除等の手続きがありますので、連絡がつかなくなることのないようお願いします。</p>
+</div>
+
+<div class="section">
+  <div class="section-title">お仕事をするにあたり④：心構え</div>
+  <p>なんとなく仕事をしている場合は慣れてくると楽に思うかもしれませんが、お客様がどうやったら喜んで、そしてまた来てくれるかを考え実践している人は楽ではありません。それはどんな仕事でもそうです。創意工夫を常に行う人と慣れだけで仕事をしている人とではクオリティやあらゆる面で差がどんどん広がっていきます。</p>
+  <p>どうすればもっと良くなるだろうという向上心と、おもてなしの心（ホスピタリティ）を持ってお仕事することを継続できれば、当店でのお給料が増えるだけではなく今後他の仕事（全く別の職種であっても）に就いた際必ず役に立ちます。どうせなら当店に在籍している間に是非チャレンジしてみてください。</p>
+</div>
+
+<div class="section alt3">
+  <div class="section-title">確定申告・インボイスについて</div>
+  <p>自身で確定申告をする際に、源泉徴収票が必要であれば内勤まで問い合わせてください。必要な期間分の源泉徴収票を作成しお渡しいたします。</p>
+  <p>インボイス登録をしている場合は、登録番号を必ず提示してください。</p>
+</div>
+
+<div class="section alt2">
+  <div class="section-title">店舗について</div>
+  <p>サクラムーングループと他2店舗運営しております。</p>
+  <p><strong>サクラムーングループ：</strong><br>サクラムーン池袋、Lana鶯谷、Lana錦糸町、ピーチムーン五反田、ドレスガーデン渋谷、キューティー、逆アナル倶楽部</p>
+  <ul>
+    <li><strong>キューティー：</strong>お客様を女装させて女装レズコース専門のお店です</li>
+    <li><strong>逆アナル倶楽部：</strong>逆AFが得意な子に在籍していただいています</li>
+  </ul>
+  <p><strong>その他：</strong><br>エイティーン、極門</p>
+  <ul>
+    <li><strong>エイティーン：</strong>ダミー店。学園系のコンセプトのお店です</li>
+    <li><strong>極門：</strong>こちらもダミー店。SM専門なので、SMが得意な子にお願いしています</li>
+  </ul>
+  <div class="note-box" style="margin-top:8px;">
+    <strong>ダミー店とは：</strong>ダミーキャストAさんとして、雰囲気が似ているキャストさんがAさんとしてお仕事に行くイメージです。
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">プライバシーポリシー</div>
+  <p>当店は、お客様およびキャストの個人情報の重要性を認識し、適切な管理と保護に努めます。業務上必要な範囲で氏名・連絡先等を取得し、ご予約対応・業務連絡・サービス提供の目的の範囲内でのみ利用いたします。法令に基づく場合を除き、ご本人の同意なく第三者に個人情報を提供することはありません。取り扱いに関するお問い合わせは店舗までご連絡ください。</p>
+</div>
+
+<div class="section alt3 read-check-section">
+  <div class="section-title">確認</div>
+  <div class="read-check-row" onclick="${guideRead ? '' : "toggleGuideRead()"}">
+    <div class="read-check-icon ${guideRead ? 'done' : 'pending'}">${guideRead ? '✓' : ''}</div>
+    <div class="read-check-label">新人ガイドを読みました</div>
+  </div>
+  <div class="save-note" id="guideReadNote"></div>
+</div>
+`;
+    return html;
+  }
+
+  function renderTabRoadmap(data){
+    var roadmapRead = !!data.roadmapRead;
+    var memo = data.memo || '';
+    var html = `
+<div class="section alt3">
+  <div class="section-title">姫デコ活用ロードマップ</div>
+  <p style="font-size:13px;">インフルエンサーレベル(IL)と予約数UPへの道</p>
+  <p>今は風俗業界でも、キャストを"推し"として見るお客様が増えています。写メ日記・動画・マイガール登録などの活動はインフルエンサーレベル(IL)として数値化され、ILが高いほど予約に直結する時代です。このロードマップの通りに動けば、着実にファンが増えていきます◎</p>
+</div>
+
+<div class="section">
+  <div class="section-title">STEP1：姫デコ（サクラ）にログイン</div>
+  <p>まずはサクラムーンでログイン！ ここが全ての入口です。写メ日記はサクラムーンを基盤に他媒体へ同時投稿されるので、基本はサクラムーンでの操作を忘れずに。</p>
+</div>
+
+<div class="section alt">
+  <div class="section-title">STEP2：写メ日記（毎日投稿・1日最低3本）</div>
+  <ul>
+    <li>「一緒にいたいな」「レア○○」「○時まで限定公開」など惹かれるタイトルに</li>
+    <li>疑問形で問いかけると反応UP</li>
+    <li>限定日記・お礼日記・口コミお礼日記は必須級！</li>
+  </ul>
+  <div class="note-box">例：「今日の下着は何色でしょう？ オキニトークで教えるね、マイガール登録してね！」</div>
+</div>
+
+<div class="section alt2">
+  <div class="section-title">STEP3：限定・動画日記</div>
+  <ul>
+    <li>写メ日記3本に1本は投稿しよう！</li>
+    <li>動画は写メ日記の2倍アクセス</li>
+    <li>声出し・下着チラ見せで惹きつける（背景を暗くして声に集中させるのが◎）</li>
+  </ul>
+  <div class="note-box">例：「○時まで限定！ 初声出し！」でレア感を演出</div>
+</div>
+
+<div class="section alt3">
+  <div class="section-title">STEP4：マイガール増加</div>
+  <p>一番大事なのがマイガールを増やすこと！ ファンを固定客に変えていきます。</p>
+  <ul>
+    <li>限定公開投稿でファンだけの特別感を作る</li>
+    <li>イチオシ文例でアピール（月間増加30人が目標）</li>
+  </ul>
+</div>
+
+<div class="section">
+  <div class="section-title">STEP5：ミテネ／1日の目安</div>
+  <ul>
+    <li>サクラ … 1日10人</li>
+    <li>ラナ … 1日1人</li>
+  </ul>
+  <p>会員へ直接届くアプローチ。既読率が高い＝マッチ率UP！ 毎出勤押すのが効果的です。</p>
+  <div class="note-box">例：「○○が大好きなの、一緒の人いる？ いたら教えてね」</div>
+</div>
+
+<div class="section alt">
+  <div class="section-title">STEP6：オキニトーク</div>
+  <p>マイガール登録から会話ができるように。相互指名につながる大事なステップです。</p>
+  <ul>
+    <li>目標：相互フォロー月10人／送信月30回以上</li>
+    <li>ファーストメッセージは自分から！（最後は疑問形がポイント）</li>
+    <li>トーク画面右下のカレンダーからネット予約に誘導できる</li>
+  </ul>
+  <div class="note-box">例：「登録ありがとうございます！ 私は○○が得意です、おにいさんは○○好きですか？」</div>
+</div>
+
+<div class="section alt3">
+  <div class="section-title">STEP7：IL30点 達成！</div>
+  <p>まずはここを目指そう！ IL30以上になると10時間の出勤で1〜3本の予約につながるとデータが出ています。写メ日記・限定日記・動画日記・ミテネ・オキニトークを活用して達成しよう。</p>
+</div>
+
+<div class="section alt2">
+  <div class="section-title">GOAL：IL40点以上へ！</div>
+  <p>安定した予約に期待大！！ さらに上を目指すとマイガール月間増加100人〜！</p>
+  <p style="font-size:12.5px;color:var(--sub);">※自分のILを知りたい人は内勤まで連絡ください！</p>
+</div>
+
+<div class="section alt3 read-check-section">
+  <div class="section-title">確認</div>
+  <div class="read-check-row" onclick="${roadmapRead ? '' : "toggleRoadmapRead()"}">
+    <div class="read-check-icon ${roadmapRead ? 'done' : 'pending'}">${roadmapRead ? '✓' : ''}</div>
+    <div class="read-check-label">姫デコロードマップを読みました</div>
+  </div>
+  <div class="save-note" id="roadmapReadNote"></div>
+</div>
+
+<div class="section alt">
+  <div class="section-title">備考メモ</div>
+  <p style="font-size:12px;color:var(--sub);">読んでいて気になったことや、後で内勤に直接聞きたいことがあれば、ここにメモしておけます（このメモは内勤には送信されません、ご自身の控えとしてお使いください）。</p>
+  <textarea class="memo-textarea" id="memoTextarea" placeholder="気になったこと・聞きたいことなど">${escapeHtml(memo)}</textarea>
+  <button class="memo-save-btn" onclick="saveMemo()">メモを保存</button>
+  <div class="save-note" id="memoSaveNote"></div>
+</div>
+`;
+    return html;
   }
 
   function toggleChecklist(key, done, iconEl){
@@ -646,6 +1120,87 @@
         }
         currentData.email = result.email;
         currentData.checklist = result.checklist;
+        note.textContent = '保存しました';
+        note.style.color = '#7FC8AA';
+      })
+      .catch(function(){
+        note.textContent = '通信エラーが発生しました';
+        note.style.color = '#c9556a';
+      });
+  }
+
+  function toggleGuideRead(){
+    var note = document.getElementById('guideReadNote');
+    note.textContent = '保存中...';
+    note.style.color = '#9C8B8F';
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setGuideRead', id: roomId })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          note.textContent = '保存に失敗しました';
+          note.style.color = '#c9556a';
+          return;
+        }
+        currentData.guideRead = true;
+        currentData.checklist = result.checklist;
+        renderTabContent();
+      })
+      .catch(function(){
+        note.textContent = '通信エラーが発生しました';
+        note.style.color = '#c9556a';
+      });
+  }
+
+  function toggleRoadmapRead(){
+    var note = document.getElementById('roadmapReadNote');
+    note.textContent = '保存中...';
+    note.style.color = '#9C8B8F';
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setRoadmapRead', id: roomId })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          note.textContent = '保存に失敗しました';
+          note.style.color = '#c9556a';
+          return;
+        }
+        currentData.roadmapRead = true;
+        currentData.checklist = result.checklist;
+        renderTabContent();
+      })
+      .catch(function(){
+        note.textContent = '通信エラーが発生しました';
+        note.style.color = '#c9556a';
+      });
+  }
+
+  function saveMemo(){
+    var textarea = document.getElementById('memoTextarea');
+    var note = document.getElementById('memoSaveNote');
+    var memo = textarea.value;
+
+    note.textContent = '保存中...';
+    note.style.color = '#9C8B8F';
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setMemo', id: roomId, memo: memo })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          note.textContent = '保存に失敗しました';
+          note.style.color = '#c9556a';
+          return;
+        }
+        currentData.memo = memo;
         note.textContent = '保存しました';
         note.style.color = '#7FC8AA';
       })
