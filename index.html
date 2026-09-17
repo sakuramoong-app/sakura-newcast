@@ -245,6 +245,44 @@
     margin-top:6px;
     height:14px;
   }
+
+  .email-row{ display:flex; gap:8px; margin-top:8px; }
+  .email-input{
+    flex:1;
+    padding:10px 13px;
+    border:1.5px solid #eee;
+    border-radius:11px;
+    font-size:14px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+  }
+  .email-input:focus{ outline:none; border-color:var(--pink); }
+  .email-save-btn{
+    border:none;
+    background:var(--pink);
+    color:#fff;
+    font-family:inherit;
+    font-weight:700;
+    font-size:13px;
+    padding:10px 16px;
+    border-radius:11px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+
+  .profile-link-btn{
+    display:block;
+    text-align:center;
+    background:var(--mint);
+    color:#fff;
+    font-weight:800;
+    font-size:14px;
+    padding:12px;
+    border-radius:12px;
+    text-decoration:none;
+    margin-top:8px;
+  }
 </style>
 </head>
 <body>
@@ -339,9 +377,6 @@
         html += '<div class="check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
       }
       html += '<div class="check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
-      if(!isCast){
-        html += '<span class="check-staff-badge">店舗確認</span>';
-      }
       html += '</div>';
     });
     html += '</div>';
@@ -433,6 +468,24 @@
     html += '<p style="font-size:13.5px;color:var(--sub);">お仕事の流れ・順守事項・お仕事セットなどの詳細は、面接時にお渡しした「新人ガイド」をご参照ください。</p>';
     html += '</div>';
 
+    // メールアドレス
+    html += '<div class="section alt">';
+    html += '<div class="section-title">メールアドレス</div>';
+    html += '<p style="font-size:12.5px;color:var(--sub);">写メ日記ツールのご登録に使用します。</p>';
+    html += '<div class="email-row">';
+    html += '<input type="email" class="email-input" id="emailInput" placeholder="example@mail.com" value="' + escapeHtml(data.email || '') + '">';
+    html += '<button class="email-save-btn" onclick="saveEmail()">保存</button>';
+    html += '</div>';
+    html += '<div class="save-note" id="emailSaveNote"></div>';
+    html += '</div>';
+
+    // 在籍プロフィール入力フォーム
+    html += '<div class="section alt2">';
+    html += '<div class="section-title">在籍プロフィール入力フォーム</div>';
+    html += '<p style="font-size:12.5px;color:var(--sub);">下記のリンクから、在籍プロフィールのご入力をお願いします。</p>';
+    html += '<a class="profile-link-btn" href="https://sakuramoong-app.github.io/cast-sakura-profile/" target="_blank">プロフィール入力フォームを開く</a>';
+    html += '</div>';
+
     html += '<div class="closing-note">※このページは在籍作成が完了次第、予告なく閉鎖します。</div>';
 
     document.getElementById('app').innerHTML = html;
@@ -514,7 +567,7 @@
         .then(function(res){ return res.json(); })
         .then(function(result){
           if(result.error){
-            alert('アップロードに失敗しました');
+            alert('アップロードに失敗しました：' + result.error);
             loadRoom();
             return;
           }
@@ -555,6 +608,42 @@
         renderRoom(currentData);
       })
       .catch(function(){ alert('通信エラーが発生しました'); });
+  }
+
+  function saveEmail(){
+    var input = document.getElementById('emailInput');
+    var note = document.getElementById('emailSaveNote');
+    var email = input.value.trim();
+
+    if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      note.textContent = '正しいメールアドレスの形式で入力してください';
+      note.style.color = '#c9556a';
+      return;
+    }
+
+    note.textContent = '保存中...';
+    note.style.color = '#9C8B8F';
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setEmail', id: roomId, email: email })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          note.textContent = '保存に失敗しました';
+          note.style.color = '#c9556a';
+          return;
+        }
+        currentData.email = result.email;
+        currentData.checklist = result.checklist;
+        note.textContent = '保存しました';
+        note.style.color = '#7FC8AA';
+      })
+      .catch(function(){
+        note.textContent = '通信エラーが発生しました';
+        note.style.color = '#c9556a';
+      });
   }
 
   function setBanner(wantBanner){

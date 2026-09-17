@@ -131,6 +131,7 @@
   }
   .btn-copy{ background:var(--lav-soft); color:#6c5896; }
   .btn-close{ background:#FDEDF0; color:#c9556a; }
+  .btn-delete{ background:#e8899b; color:#fff; }
   .btn-toggle-checklist{ background:var(--mint-soft); color:#2c5b45; }
 
   .room-progress-track{
@@ -204,6 +205,14 @@
     padding:3px 0;
   }
   .room-choice-val{ color:#6c5896; font-weight:700; }
+  .room-costume-label{ font-size:11px; font-weight:800; color:#6c5896; margin:10px 0 6px; }
+  .room-costume-grid{ display:flex; gap:8px; }
+  .room-costume-thumb{
+    width:64px; height:80px;
+    object-fit:cover;
+    border-radius:8px;
+    border:1px solid #ddd;
+  }
 
   .room-comments{ margin-top:6px; max-height:200px; overflow-y:auto; }
   .room-comment{
@@ -460,6 +469,8 @@
       html += '<button class="btn-toggle-checklist" onclick="toggleRoomChecklist(' + idx + ')">やることリスト</button>';
       if(!isClosed){
         html += '<button class="btn-close" onclick="closeRoom(\'' + room.roomId + '\')">終了する</button>';
+      } else {
+        html += '<button class="btn-delete" onclick="deleteRoom(\'' + room.roomId + '\')">削除する</button>';
       }
       html += '</div>';
 
@@ -469,14 +480,28 @@
       var banner = room.bannerChoice || {};
       var kit = room.kitChoice || {};
       var wig = room.wigChoice || {};
+      var costumeUrls = room.costumeUrls || [];
       html += '<div class="room-choices">';
       html += '<div class="room-choice-title">キャストの選択内容</div>';
+      html += '<div class="room-choice-row"><span>メールアドレス</span><span class="room-choice-val">' + (room.email ? escapeHtml(room.email) : '未入力') + '</span></div>';
       html += '<div class="room-choice-row"><span>新人バナー</span><span class="room-choice-val">' + (banner.wantBanner === true ? '作成する' : (banner.wantBanner === false ? '作成しない' : '未回答')) + '</span></div>';
       html += '<div class="room-choice-row"><span>お仕事セット</span><span class="room-choice-val">' + (kit.type === 'shop' ? '事務所で購入' : (kit.type === 'own' ? '自分で用意' : '未回答')) + '</span></div>';
       var wigText = '未回答';
       if(wig.type === 'wig') wigText = 'ウィッグを使う';
       else if(wig.type === 'jimoto') wigText = '地毛（ヘアメイク：' + (wig.hairMake === true ? '行く' : (wig.hairMake === false ? '行かない' : '未回答')) + '）';
       html += '<div class="room-choice-row"><span>ウィッグ/地毛</span><span class="room-choice-val">' + wigText + '</span></div>';
+
+      var hasCostume = costumeUrls.some(function(u){ return !!u; });
+      if(hasCostume){
+        html += '<div class="room-costume-label">衣装の写真</div>';
+        html += '<div class="room-costume-grid">';
+        for(var ci=0; ci<3; ci++){
+          if(costumeUrls[ci]){
+            html += '<a href="' + costumeUrls[ci] + '" target="_blank"><img src="' + costumeUrls[ci] + '" class="room-costume-thumb" alt="衣装' + (ci+1) + '"></a>';
+          }
+        }
+        html += '</div>';
+      }
       html += '</div>';
 
       // やることリスト（キャスト共有・店舗確認・内勤専用すべて、チェックマークで操作）
@@ -648,6 +673,27 @@
       .then(function(data){
         if(data.error){
           alert('終了に失敗しました：' + data.error);
+          return;
+        }
+        loadRooms();
+      })
+      .catch(function(){
+        alert('通信エラーが発生しました');
+      });
+  }
+
+  function deleteRoom(roomId){
+    if(!confirm('このルームを完全に削除しますか？ この操作は取り消せません。')){
+      return;
+    }
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteRoom', token: savedToken, id: roomId })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if(data.error){
+          alert('削除に失敗しました：' + data.error);
           return;
         }
         loadRooms();
