@@ -6,7 +6,6 @@
 <title>在籍作成ルーム管理（内勤用）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --bg:#FAF7F5;
@@ -53,6 +52,24 @@
     box-shadow:0 3px 12px rgba(217,160,180,.14);
   }
   .card-title{ font-size:15px; font-weight:800; margin-bottom:14px; }
+  .card-title-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .card-title-row .card-title{ margin-bottom:0; }
+  .btn-refresh{
+    border:none;
+    background:var(--mint-soft);
+    color:#2c5b45;
+    font-family:inherit;
+    font-weight:700;
+    font-size:12px;
+    padding:7px 14px;
+    border-radius:99px;
+    cursor:pointer;
+  }
 
   label{
     display:block;
@@ -145,11 +162,25 @@
   .room-item{
     background:#fff;
     border-radius:14px;
-    padding:14px 16px;
     margin-bottom:10px;
     box-shadow:0 2px 8px rgba(217,160,180,.1);
+    overflow:hidden;
   }
   .room-item.closed{ opacity:0.55; }
+  .room-header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:14px 16px;
+    cursor:pointer;
+  }
+  .room-header-main{ flex:1; min-width:0; }
+  .room-caret{ font-size:13px; color:var(--sub); flex-shrink:0; }
+  .room-body{
+    display:none;
+    padding:0 16px 16px;
+  }
+  .room-body.show{ display:block; }
   .room-name{ font-size:14.5px; font-weight:800; margin-bottom:4px; }
   .room-meta{ font-size:11.5px; color:var(--sub); margin-bottom:8px; }
   .room-actions{ display:flex; gap:8px; }
@@ -227,20 +258,6 @@
   }
   .room-checklist-group-title:first-child{ margin-top:0; border-top:none; padding-top:0; }
 
-  .btn-save-image{
-    width:100%;
-    border:none;
-    background:var(--lav);
-    color:#fff;
-    font-family:inherit;
-    font-weight:700;
-    font-size:12.5px;
-    padding:9px;
-    border-radius:99px;
-    cursor:pointer;
-    margin-top:8px;
-  }
-
   .accordion{
     margin-top:12px;
     border-radius:12px;
@@ -275,6 +292,101 @@
     padding:6px 13px 12px;
   }
   .accordion-body.show{ display:block; }
+
+  .talk-card{
+    border-radius:14px;
+    padding:13px 14px;
+    margin-top:10px;
+    border:1.5px solid transparent;
+  }
+  .talk-card:first-child{ margin-top:0; }
+  .talk-card-pink{ background:var(--pink-soft); border-color:#F5CBD3; }
+  .talk-card-lav{ background:var(--lav-soft); border-color:#DCCBEE; }
+  .talk-card-mint{ background:var(--mint-soft); border-color:#C7E9D8; }
+  .talk-card-peach{ background:#FDF0E4; border-color:#F0D6B8; }
+  .talk-card-done{ opacity:0.6; }
+
+  .talk-card-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:8px;
+    flex-wrap:wrap;
+  }
+  .talk-card-badge{
+    width:24px; height:24px;
+    border-radius:50%;
+    background:var(--pink);
+    color:#fff;
+    font-weight:800;
+    font-size:12px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .talk-card-title{ font-size:13.5px; font-weight:800; color:var(--ink); flex:1; }
+  .talk-card-done-mark{
+    font-size:10.5px;
+    font-weight:800;
+    color:#2c5b45;
+    background:var(--mint-soft);
+    padding:2px 9px;
+    border-radius:99px;
+  }
+
+  .talk-card-points{
+    margin:0 0 8px;
+    padding-left:19px;
+  }
+  .talk-card-points li{
+    font-size:12.5px;
+    color:var(--ink);
+    margin-bottom:4px;
+    line-height:1.6;
+  }
+
+  .talk-card-detail{
+    font-size:11.5px;
+    color:#6B655D;
+    line-height:1.7;
+    margin-bottom:8px;
+  }
+
+  .talk-card-say{
+    background:#fff;
+    border-radius:10px;
+    padding:9px 12px;
+    margin-bottom:8px;
+  }
+  .talk-card-say-label{
+    font-size:10px;
+    font-weight:800;
+    color:#c9556a;
+    margin-bottom:3px;
+  }
+  .talk-card-say-text{
+    font-size:12px;
+    color:#5c2732;
+    line-height:1.6;
+  }
+
+  .talk-card-btn{
+    display:block;
+    width:100%;
+    border:none;
+    font-family:inherit;
+    font-weight:800;
+    font-size:12.5px;
+    padding:10px;
+    border-radius:99px;
+    cursor:pointer;
+  }
+  .talk-card-btn-done{ background:var(--pink); color:#fff; }
+  .talk-card-btn-undo{ background:#eee; color:#888; }
+  .talk-card-closed-note{
+    text-align:center;
+    font-size:11.5px;
+    color:var(--sub);
+  }
 
   .room-choices{
     background:var(--lav-soft);
@@ -361,7 +473,7 @@
   <h1>在籍作成ルーム管理</h1>
   <p class="lead">合言葉を入力してください</p>
   <input type="password" id="tokenInput" placeholder="合言葉" style="max-width:260px;margin:16px auto 0;">
-  <button class="btn" style="max-width:260px;margin:12px auto 0;" onclick="checkToken()">開く</button>
+  <button class="btn" id="loginBtn" style="max-width:260px;margin:12px auto 0;" onclick="checkToken()">開く</button>
 </div>
 
 <div id="mainApp" style="display:none;">
@@ -430,7 +542,10 @@
   </div>
 
   <div class="card">
-    <div class="card-title">ルーム一覧</div>
+    <div class="card-title-row">
+      <div class="card-title">ルーム一覧</div>
+      <button class="btn-refresh" onclick="loadRooms()">🔄 更新</button>
+    </div>
     <div id="roomList"><div class="empty">読み込んでいます...</div></div>
   </div>
 </div>
@@ -497,12 +612,38 @@
       alert('合言葉を入力してください');
       return;
     }
-    savedToken = token;
-    sessionStorage.setItem(STAFF_TOKEN_STORAGE_KEY, token);
-    document.getElementById('tokenGate').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    renderStoreCheckboxes();
-    loadRooms();
+
+    var loginBtn = document.getElementById('loginBtn');
+    if(loginBtn){
+      loginBtn.disabled = true;
+      loginBtn.textContent = '確認中...';
+    }
+
+    fetch(GAS_URL + '?action=checkToken&token=' + encodeURIComponent(token))
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(loginBtn){
+          loginBtn.disabled = false;
+          loginBtn.textContent = '開く';
+        }
+        if(!result.valid){
+          alert('合言葉が違います');
+          return;
+        }
+        savedToken = token;
+        sessionStorage.setItem(STAFF_TOKEN_STORAGE_KEY, token);
+        document.getElementById('tokenGate').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        renderStoreCheckboxes();
+        loadRooms();
+      })
+      .catch(function(){
+        if(loginBtn){
+          loginBtn.disabled = false;
+          loginBtn.textContent = '開く';
+        }
+        alert('通信エラーが発生しました。時間をおいて再度お試しください。');
+      });
   }
 
   function createRoom(){
@@ -671,10 +812,17 @@
       var staffOnlyDoneCount = staffOnlyKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
 
       html += '<div class="room-item' + (isClosed ? ' closed' : '') + '" id="roomItem' + idx + '">';
+      html += '<div class="room-header" onclick="toggleRoomAccordion(' + idx + ')">';
+      html += '<div class="room-header-main">';
       html += '<div class="room-name">' + escapeHtml(room.castName || '（名称未設定）') +
         '<span class="badge ' + (isClosed ? 'closed' : 'active') + '">' + (isClosed ? '終了済み' : '稼働中') + '</span></div>';
       html += '<div class="room-meta">作成：' + formatDate(room.createdAt) + (isClosed ? ' ／ 終了：' + formatDate(room.closedAt) : '') + '　／　全体進捗 ' + doneCount + '/' + metaKeys.length + '</div>';
       html += '<div class="room-progress-track"><div class="room-progress-fill" style="width:' + pct + '%;"></div></div>';
+      html += '</div>';
+      html += '<span class="room-caret" id="roomCaret' + idx + '">▾</span>';
+      html += '</div>';
+
+      html += '<div class="room-body" id="roomBody' + idx + '">';
 
       html += '<div class="room-actions">';
       html += '<button class="btn-copy" onclick="copyRoomUrl(\'' + url + '\', this)">URLをコピー</button>';
@@ -684,7 +832,6 @@
         html += '<button class="btn-delete" onclick="deleteRoom(\'' + room.roomId + '\')">削除する</button>';
       }
       html += '</div>';
-      html += '<button class="btn-save-image" onclick="saveRoomAsImage(' + idx + ', \'' + escapeHtml(room.castName || '') + '\')">📷 画像として保存</button>';
 
       html += '<div id="roomCaptureArea' + idx + '">';
 
@@ -721,10 +868,10 @@
       // アコーディオン1：口頭説明チェックリスト
       html += renderAccordion('talk' + idx, '📋 口頭説明チェックリスト', talkDoneCount, talkKeys.length, (function(){
         var inner = '';
-        talkKeys.forEach(function(key){
+        talkKeys.forEach(function(key, tIdx){
           var meta = globalTalkChecklistMeta[key];
           var state = talkChecklist[key] || { done: false };
-          inner += renderTalkCheckItem(room.roomId, key, meta, state, isClosed);
+          inner += renderTalkCheckItem(room.roomId, key, meta, state, isClosed, tIdx + 1);
         });
         return inner;
       })());
@@ -771,9 +918,9 @@
       html += '<button class="room-comment-send" onclick="sendComment(\'' + room.roomId + '\',' + idx + ')">送信</button>';
       html += '</div>';
 
-      html += '</div>'; // roomCaptureArea
+      html += '</div>'; // room-body
 
-      html += '</div>';
+      html += '</div>'; // room-item
     });
 
     document.getElementById('roomList').innerHTML = html;
@@ -803,19 +950,59 @@
     }
   }
 
-  function renderTalkCheckItem(roomId, key, meta, state, isClosed){
-    var html = '<div class="room-check-item">';
-    if(!isClosed){
-      html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + ' clickable" onclick="toggleTalkChecklist(\'' + roomId + '\',\'' + key + '\',' + (!state.done) + ', this)">' + (state.done ? '✓' : '') + '</div>';
+  function toggleRoomAccordion(idx){
+    var body = document.getElementById('roomBody' + idx);
+    var caret = document.getElementById('roomCaret' + idx);
+    if(body.classList.contains('show')){
+      body.classList.remove('show');
+      caret.textContent = '▾';
     } else {
-      html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
+      body.classList.add('show');
+      caret.textContent = '▴';
     }
-    html += '<div class="room-check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
+  }
+
+  function renderTalkCheckItem(roomId, key, meta, state, isClosed, num){
+    var color = meta.color || 'pink';
+    var html = '<div class="talk-card talk-card-' + color + (state.done ? ' talk-card-done' : '') + '">';
+    html += '<div class="talk-card-head">';
+    html += '<span class="talk-card-badge">' + num + '</span>';
+    html += '<span class="talk-card-title">' + escapeHtml(meta.label) + '</span>';
+    if(state.done){
+      html += '<span class="talk-card-done-mark">✓ 説明済み</span>';
+    }
+    html += '</div>';
+
+    if(meta.points && meta.points.length){
+      html += '<ul class="talk-card-points">';
+      meta.points.forEach(function(p){
+        html += '<li>' + escapeHtml(p) + '</li>';
+      });
+      html += '</ul>';
+    }
+
+    if(meta.detail){
+      html += '<div class="talk-card-detail">' + meta.detail + '</div>';
+    }
+
+    if(meta.say){
+      html += '<div class="talk-card-say">';
+      html += '<div class="talk-card-say-label">💬 こう伝えるとよいです</div>';
+      html += '<div class="talk-card-say-text">「' + escapeHtml(meta.say) + '」</div>';
+      html += '</div>';
+    }
+
+    if(!isClosed){
+      html += '<button class="talk-card-btn ' + (state.done ? 'talk-card-btn-undo' : 'talk-card-btn-done') + '" onclick="toggleTalkChecklist(\'' + roomId + '\',\'' + key + '\',' + (!state.done) + ', this)">' + (state.done ? '取り消す' : '説明し終えたらタップ') + '</button>';
+    } else if(state.done){
+      html += '<div class="talk-card-closed-note">説明済み</div>';
+    }
+
     html += '</div>';
     return html;
   }
 
-  function toggleTalkChecklist(roomId, key, done, iconEl){
+  function toggleTalkChecklist(roomId, key, done, btnEl){
     var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
     var prevState = room && room.talkChecklist && room.talkChecklist[key] ? room.talkChecklist[key].done : false;
     if(room){
@@ -823,14 +1010,14 @@
       room.talkChecklist[key] = { done: done, at: done ? new Date().toISOString() : '' };
     }
 
-    if(iconEl){
-      iconEl.className = 'room-check-icon clickable ' + (done ? 'done' : 'pending');
-      iconEl.textContent = done ? '✓' : '';
-      iconEl.setAttribute('onclick', "toggleTalkChecklist('" + roomId + "','" + key + "'," + (!done) + ", this)");
-      var labelEl = iconEl.nextElementSibling;
-      if(labelEl){
-        labelEl.className = 'room-check-label' + (done ? ' done' : '');
-      }
+    // 楽観的更新：カード全体を即座に再描画する
+    var cardEl = btnEl ? btnEl.closest('.talk-card') : null;
+    if(cardEl){
+      var meta = globalTalkChecklistMeta[key];
+      var newCardHtml = renderTalkCheckItem(roomId, key, meta, room.talkChecklist[key], false, cardEl.querySelector('.talk-card-badge').textContent);
+      var temp = document.createElement('div');
+      temp.innerHTML = newCardHtml;
+      cardEl.replaceWith(temp.firstElementChild);
     }
     updateAccordionProgressCounts();
 
@@ -928,15 +1115,25 @@
         globalTalkChecklistMeta = data.talkChecklistMeta || {};
         globalStoreList = data.storeList || [];
         lastRoomsData = data.rooms || [];
-        // 開いているアコーディオンの展開状態を保持したまま再描画
+        // 開いているアコーディオン・ルームカードの展開状態を保持したまま再描画
         var openIds = [];
         document.querySelectorAll('.accordion-body.show').forEach(function(el){
           openIds.push(el.id.replace('acc', ''));
+        });
+        var openRoomIdxs = [];
+        document.querySelectorAll('.room-body.show').forEach(function(el){
+          openRoomIdxs.push(el.id.replace('roomBody', ''));
         });
         renderRoomList(data.rooms);
         openIds.forEach(function(accId){
           var body = document.getElementById('acc' + accId);
           var caret = document.getElementById('caret' + accId);
+          if(body){ body.classList.add('show'); }
+          if(caret){ caret.textContent = '▴'; }
+        });
+        openRoomIdxs.forEach(function(idx){
+          var body = document.getElementById('roomBody' + idx);
+          var caret = document.getElementById('roomCaret' + idx);
           if(body){ body.classList.add('show'); }
           if(caret){ caret.textContent = '▴'; }
         });
@@ -1017,41 +1214,6 @@
       .catch(function(){
         alert('通信エラーが発生しました');
       });
-  }
-
-  function saveRoomAsImage(idx, castName){
-    var target = document.getElementById('roomCaptureArea' + idx);
-    if(!target){
-      alert('対象が見つかりませんでした');
-      return;
-    }
-
-    // 全アコーディオンを一時的に開いた状態にしてキャプチャする
-    var bodies = target.querySelectorAll('.accordion-body');
-    var wasOpen = [];
-    bodies.forEach(function(el){
-      wasOpen.push(el.classList.contains('show'));
-      el.classList.add('show');
-    });
-
-    if(typeof html2canvas === 'undefined'){
-      alert('画像化ライブラリの読み込みに失敗しました。通信環境をご確認のうえ、再読み込みしてください。');
-      bodies.forEach(function(el, i){ if(!wasOpen[i]) el.classList.remove('show'); });
-      return;
-    }
-
-    html2canvas(target, { backgroundColor: '#FAF7F5', scale: 2 }).then(function(canvas){
-      bodies.forEach(function(el, i){ if(!wasOpen[i]) el.classList.remove('show'); });
-
-      var link = document.createElement('a');
-      var dateStr = new Date().toISOString().slice(0,10);
-      link.download = (castName || 'ルーム') + '_進捗_' + dateStr + '.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    }).catch(function(){
-      bodies.forEach(function(el, i){ if(!wasOpen[i]) el.classList.remove('show'); });
-      alert('画像の作成に失敗しました');
-    });
   }
 
   function formatDate(iso){
