@@ -371,6 +371,146 @@
     cursor:pointer;
     margin-top:8px;
   }
+
+  .roadmap-hero{
+    text-align:center;
+    background:linear-gradient(160deg, #F7C9D4, #F0AA6E);
+    border-radius:20px;
+    padding:26px 18px;
+    margin-bottom:16px;
+    color:#fff;
+  }
+  .roadmap-hero-kicker{
+    display:inline-block;
+    font-size:11.5px;
+    font-weight:800;
+    background:rgba(255,255,255,.3);
+    padding:4px 14px;
+    border-radius:99px;
+    margin-bottom:12px;
+  }
+  .roadmap-hero-title{
+    font-size:24px;
+    font-weight:800;
+    line-height:1.35;
+    margin-bottom:10px;
+  }
+  .roadmap-hero-sub{
+    font-size:13px;
+    font-weight:700;
+    opacity:.95;
+    line-height:1.6;
+  }
+
+  .roadmap-start-label{
+    text-align:center;
+    font-weight:800;
+    font-size:13px;
+    color:#c9556a;
+    margin-top:6px;
+  }
+
+  .roadmap-step{ display:flex; gap:10px; margin-bottom:4px; align-items:flex-start; }
+  .roadmap-step-badge{
+    width:32px; height:32px;
+    border-radius:50%;
+    background:var(--pink);
+    color:#fff;
+    font-weight:800;
+    font-size:15px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    margin-top:2px;
+    box-shadow:0 3px 8px rgba(242,166,179,.4);
+  }
+  .roadmap-step-card{
+    flex:1;
+    background:#fff;
+    border-radius:16px;
+    padding:14px 16px;
+    box-shadow:0 3px 12px rgba(217,160,180,.14);
+  }
+  .roadmap-step-title{
+    font-size:15px;
+    font-weight:800;
+    color:var(--ink);
+    margin-bottom:8px;
+  }
+  .roadmap-step-highlight{
+    display:inline-block;
+    font-size:12px;
+    font-weight:800;
+    color:#fff;
+    background:var(--mint);
+    padding:3px 12px;
+    border-radius:99px;
+    margin-bottom:8px;
+  }
+  .roadmap-heart-list{ list-style:none; margin:0 0 8px; padding:0; }
+  .roadmap-heart-list li{
+    font-size:13px;
+    color:var(--ink);
+    margin-bottom:6px;
+    padding-left:20px;
+    position:relative;
+    line-height:1.6;
+  }
+  .roadmap-heart-list li::before{
+    content:"♡";
+    position:absolute;
+    left:0;
+    color:var(--pink);
+  }
+  .roadmap-example{
+    background:var(--pink-soft);
+    border-radius:10px;
+    padding:9px 12px;
+    font-size:12px;
+    color:#c9556a;
+    margin-top:8px;
+    line-height:1.6;
+  }
+  .roadmap-arrow{
+    text-align:center;
+    color:var(--pink);
+    font-size:18px;
+    margin:6px 0;
+  }
+
+  .roadmap-goal{
+    text-align:center;
+    background:linear-gradient(160deg, #F0C36E, #F2A6B3);
+    border-radius:20px;
+    padding:26px 18px;
+    margin:6px 0 16px;
+    color:#fff;
+  }
+  .roadmap-goal-badge{
+    display:inline-block;
+    font-size:13px;
+    font-weight:800;
+    background:rgba(255,255,255,.3);
+    padding:4px 16px;
+    border-radius:99px;
+    margin-bottom:10px;
+  }
+  .roadmap-goal-title{
+    font-size:22px;
+    font-weight:800;
+    margin-bottom:6px;
+  }
+  .roadmap-goal-sub{
+    font-size:13.5px;
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  .roadmap-goal-note{
+    font-size:11.5px;
+    opacity:.95;
+    line-height:1.7;
+    border-top:1px solid rgba(255,255,255,.4);
+    padding-top:10px;
+  }
 </style>
 </head>
 <body>
@@ -446,6 +586,7 @@
     html += '<button class="tab-btn' + (currentTab === 'progress' ? ' active' : '') + '" onclick="switchTab(\'progress\')">バック・進捗</button>';
     html += '<button class="tab-btn' + (currentTab === 'guide' ? ' active' : '') + '" onclick="switchTab(\'guide\')">新人ガイド</button>';
     html += '<button class="tab-btn' + (currentTab === 'roadmap' ? ' active' : '') + '" onclick="switchTab(\'roadmap\')">姫デコロードマップ</button>';
+    html += '<button class="tab-btn' + (currentTab === 'memo' ? ' active' : '') + '" onclick="switchTab(\'memo\')">メモ</button>';
     html += '</div>';
 
     html += '<div id="tabContent"></div>';
@@ -468,6 +609,8 @@
       html = renderTabGuide(currentData);
     } else if(currentTab === 'roadmap'){
       html = renderTabRoadmap(currentData);
+    } else if(currentTab === 'memo'){
+      html = renderTabMemo(currentData);
     }
     html += '<div class="closing-note">※このページは在籍作成が完了次第、予告なく閉鎖します。</div>';
     document.getElementById('tabContent').innerHTML = html;
@@ -524,6 +667,32 @@
       html += '</label>';
     }
     html += '</div>';
+    html += '</div>';
+
+    // 在籍プロフィール入力フォーム
+    html += '<div class="section alt2">';
+    html += '<div class="section-title">在籍プロフィール入力フォーム</div>';
+    html += '<p style="font-size:12.5px;color:var(--sub);">下記のリンクから、在籍プロフィールのご入力をお願いします。</p>';
+    html += '<a class="profile-link-btn" href="https://sakuramoong-app.github.io/cast-sakura-profile/" target="_blank">プロフィール入力フォームを開く</a>';
+    html += '</div>';
+
+    // 在籍店舗
+    var stores = data.stores || {};
+    var storeList = data.storeList || [];
+    var storeNames = storeList.filter(function(s){ return stores[s.key]; }).map(function(s){ return s.label; });
+    html += '<div class="section alt">';
+    html += '<div class="section-title">在籍店舗について</div>';
+    html += '<p style="font-size:12.5px;color:var(--sub);">以下の店舗に在籍を掲載します</p>';
+    if(storeNames.length){
+      html += '<ul class="extra-list">';
+      storeNames.forEach(function(name){
+        html += '<li><span>' + escapeHtml(name) + '</span></li>';
+      });
+      html += '</ul>';
+    } else {
+      html += '<p style="font-size:13px;color:var(--sub);">現在、掲載店舗は設定されていません。</p>';
+    }
+    html += '<div class="note-box" style="margin-top:8px;">キューティキューティ・逆アナル倶楽部・極門への在籍については、内勤と相談しながら決めています！ 気になる場合は気軽に聞いてください。</div>';
     html += '</div>';
 
     // 新人バナー
@@ -599,12 +768,6 @@
     html += '<div class="save-note" id="emailSaveNote"></div>';
     html += '</div>';
 
-    // 在籍プロフィール入力フォーム
-    html += '<div class="section alt2">';
-    html += '<div class="section-title">在籍プロフィール入力フォーム</div>';
-    html += '<p style="font-size:12.5px;color:var(--sub);">下記のリンクから、在籍プロフィールのご入力をお願いします。</p>';
-    html += '<a class="profile-link-btn" href="https://sakuramoong-app.github.io/cast-sakura-profile/" target="_blank">プロフィール入力フォームを開く</a>';
-    html += '</div>';
 
     return html;
   }
@@ -880,78 +1043,113 @@
 
   function renderTabRoadmap(data){
     var roadmapRead = !!data.roadmapRead;
-    var memo = data.memo || '';
     var html = `
-<div class="section alt3">
-  <div class="section-title">姫デコ活用ロードマップ</div>
-  <p style="font-size:13px;">インフルエンサーレベル(IL)と予約数UPへの道</p>
-  <p>今は風俗業界でも、キャストを"推し"として見るお客様が増えています。写メ日記・動画・マイガール登録などの活動はインフルエンサーレベル(IL)として数値化され、ILが高いほど予約に直結する時代です。このロードマップの通りに動けば、着実にファンが増えていきます◎</p>
-</div>
-
-<div class="section">
-  <div class="section-title">STEP1：姫デコ（サクラ）にログイン</div>
-  <p>まずはサクラムーンでログイン！ ここが全ての入口です。写メ日記はサクラムーンを基盤に他媒体へ同時投稿されるので、基本はサクラムーンでの操作を忘れずに。</p>
-</div>
-
-<div class="section alt">
-  <div class="section-title">STEP2：写メ日記（毎日投稿・1日最低3本）</div>
-  <ul>
-    <li>「一緒にいたいな」「レア○○」「○時まで限定公開」など惹かれるタイトルに</li>
-    <li>疑問形で問いかけると反応UP</li>
-    <li>限定日記・お礼日記・口コミお礼日記は必須級！</li>
-  </ul>
-  <div class="note-box">例：「今日の下着は何色でしょう？ オキニトークで教えるね、マイガール登録してね！」</div>
-</div>
-
-<div class="section alt2">
-  <div class="section-title">STEP3：限定・動画日記</div>
-  <ul>
-    <li>写メ日記3本に1本は投稿しよう！</li>
-    <li>動画は写メ日記の2倍アクセス</li>
-    <li>声出し・下着チラ見せで惹きつける（背景を暗くして声に集中させるのが◎）</li>
-  </ul>
-  <div class="note-box">例：「○時まで限定！ 初声出し！」でレア感を演出</div>
+<div class="roadmap-hero">
+  <div class="roadmap-hero-kicker">🌸 SAKURA MOON GROUP</div>
+  <div class="roadmap-hero-title">姫デコ活用<br>ロードマップ</div>
+  <div class="roadmap-hero-sub">インフルエンサーレベル(IL)と<br>予約数UPへの道 🌙</div>
 </div>
 
 <div class="section alt3">
-  <div class="section-title">STEP4：マイガール増加</div>
-  <p>一番大事なのがマイガールを増やすこと！ ファンを固定客に変えていきます。</p>
-  <ul>
-    <li>限定公開投稿でファンだけの特別感を作る</li>
-    <li>イチオシ文例でアピール（月間増加30人が目標）</li>
-  </ul>
+  <p>今は風俗業界でも、キャストを"推し"として見るお客様が増えています。写メ日記・動画・マイガール登録などの活動はインフルエンサーレベル(IL)として数値化され、ILが高いほど予約に直結する時代です。</p>
+  <p>このロードマップの通りに動けば、着実にファンが増えていきます◎</p>
+  <div class="roadmap-start-label">START！ まずは基本の発信から</div>
 </div>
 
-<div class="section">
-  <div class="section-title">STEP5：ミテネ／1日の目安</div>
-  <ul>
-    <li>サクラ … 1日10人</li>
-    <li>ラナ … 1日1人</li>
-  </ul>
-  <p>会員へ直接届くアプローチ。既読率が高い＝マッチ率UP！ 毎出勤押すのが効果的です。</p>
-  <div class="note-box">例：「○○が大好きなの、一緒の人いる？ いたら教えてね」</div>
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">1</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">🔑 姫デコ（サクラ）にログイン</div>
+    <p>まずはサクラムーンでログイン！ ここが全ての入口です。写メ日記はサクラムーンを基盤に他媒体へ同時投稿されるので、基本はサクラムーンでの操作を忘れずに。</p>
+  </div>
 </div>
+<div class="roadmap-arrow">▼</div>
 
-<div class="section alt">
-  <div class="section-title">STEP6：オキニトーク</div>
-  <p>マイガール登録から会話ができるように。相互指名につながる大事なステップです。</p>
-  <ul>
-    <li>目標：相互フォロー月10人／送信月30回以上</li>
-    <li>ファーストメッセージは自分から！（最後は疑問形がポイント）</li>
-    <li>トーク画面右下のカレンダーからネット予約に誘導できる</li>
-  </ul>
-  <div class="note-box">例：「登録ありがとうございます！ 私は○○が得意です、おにいさんは○○好きですか？」</div>
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">2</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">📸 写メ日記</div>
+    <div class="roadmap-step-highlight">毎日投稿・1日最低3本</div>
+    <ul class="roadmap-heart-list">
+      <li>「一緒にいたいな」「レア○○」「○時まで限定公開」など惹かれるタイトルに</li>
+      <li>疑問形で問いかけると反応UP</li>
+      <li>限定日記・お礼日記・口コミお礼日記は必須級！</li>
+    </ul>
+    <div class="roadmap-example">例：「今日の下着は何色でしょう？ オキニトークで教えるね、マイガール登録してね！」</div>
+  </div>
 </div>
+<div class="roadmap-arrow">▼</div>
 
-<div class="section alt3">
-  <div class="section-title">STEP7：IL30点 達成！</div>
-  <p>まずはここを目指そう！ IL30以上になると10時間の出勤で1〜3本の予約につながるとデータが出ています。写メ日記・限定日記・動画日記・ミテネ・オキニトークを活用して達成しよう。</p>
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">3</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">🎬 限定・動画日記</div>
+    <ul class="roadmap-heart-list">
+      <li>写メ日記3本に1本は投稿しよう！</li>
+      <li>動画は写メ日記の2倍アクセス ✨</li>
+      <li>声出し・下着チラ見せで惹きつける（背景を暗くして声に集中させるのが◎）</li>
+    </ul>
+    <div class="roadmap-example">例：「○時まで限定！ 初声出し！」でレア感を演出</div>
+  </div>
 </div>
+<div class="roadmap-arrow">▼</div>
 
-<div class="section alt2">
-  <div class="section-title">GOAL：IL40点以上へ！</div>
-  <p>安定した予約に期待大！！ さらに上を目指すとマイガール月間増加100人〜！</p>
-  <p style="font-size:12.5px;color:var(--sub);">※自分のILを知りたい人は内勤まで連絡ください！</p>
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">4</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">💖 マイガール増加 ㊙</div>
+    <p>一番大事なのがマイガールを増やすこと！ ファンを固定客に変えていきます。</p>
+    <ul class="roadmap-heart-list">
+      <li>限定公開投稿でファンだけの特別感を作る</li>
+      <li>イチオシ文例でアピール（月間増加30人が目標）</li>
+    </ul>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">5</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">👀 ミテネ ／ 1日の目安</div>
+    <ul class="roadmap-heart-list">
+      <li>サクラ … 1日10人</li>
+      <li>ラナ … 1日1人</li>
+    </ul>
+    <p>会員へ直接届くアプローチ。既読率が高い＝マッチ率UP！ 毎出勤押すのが効果的です。</p>
+    <div class="roadmap-example">例：「○○が大好きなの、一緒の人いる？ いたら教えてね♡」</div>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">6</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">💬 オキニトーク</div>
+    <p>マイガール登録から会話ができるように。相互指名につながる大事なステップです。</p>
+    <ul class="roadmap-heart-list">
+      <li>目標：相互フォロー 月10人／送信 月30回以上</li>
+      <li>ファーストメッセージは自分から！（最後は疑問形がポイント）</li>
+      <li>トーク画面右下のカレンダーからネット予約に誘導できる</li>
+    </ul>
+    <div class="roadmap-example">例：「登録ありがとうございます！ 私は○○が得意です、おにいさんは○○好きですか？」</div>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">7</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">⛩️ IL30点 達成！</div>
+    <p>まずはここを目指そう！<br>IL30以上になると<strong>10時間の出勤で1〜3本の予約</strong>につながるとデータが出ています。写メ日記・限定日記・動画日記・ミテネ・オキニトークを活用して達成しよう ✨</p>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-goal">
+  <div class="roadmap-goal-badge">🏆 GOAL</div>
+  <div class="roadmap-goal-title">IL40点以上へ！</div>
+  <div class="roadmap-goal-sub">安定した予約に期待大！！ ✨</div>
+  <div class="roadmap-goal-note">さらに上を目指すとマイガール月間増加100人〜！<br>※自分のILを知りたい人は内勤まで連絡ください！</div>
 </div>
 
 <div class="section alt3 read-check-section">
@@ -962,10 +1160,16 @@
   </div>
   <div class="save-note" id="roadmapReadNote"></div>
 </div>
+`;
+    return html;
+  }
 
+  function renderTabMemo(data){
+    var memo = data.memo || '';
+    var html = `
 <div class="section alt">
   <div class="section-title">備考メモ</div>
-  <p style="font-size:12px;color:var(--sub);">読んでいて気になったことや、後で内勤に直接聞きたいことがあれば、ここにメモしておけます（このメモは内勤には送信されません、ご自身の控えとしてお使いください）。</p>
+  <p style="font-size:12.5px;color:var(--sub);">読んでいて気になったことや、後で内勤に直接聞きたいことがあれば、ここにメモしておけます（このメモは内勤には送信されません、ご自身の控えとしてお使いください）。</p>
   <textarea class="memo-textarea" id="memoTextarea" placeholder="気になったこと・聞きたいことなど">${escapeHtml(memo)}</textarea>
   <button class="memo-save-btn" onclick="saveMemo()">メモを保存</button>
   <div class="save-note" id="memoSaveNote"></div>
