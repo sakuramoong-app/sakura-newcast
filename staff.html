@@ -215,6 +215,7 @@
   .room-check-ownerbadge.cast{ background:var(--lav-soft); color:#6c5896; }
   .room-check-ownerbadge.staff{ background:var(--pink-soft); color:#c9556a; }
   .room-check-ownerbadge.staffOnly{ background:#eee; color:#888; }
+  .room-check-ownerbadge.staffCheck{ background:var(--mint-soft); color:#2c5b45; }
 
   .room-checklist-group-title{
     font-size:11px;
@@ -688,15 +689,12 @@
       html += '<div id="roomCaptureArea' + idx + '">';
 
       // キャストの選択内容
-      var banner = room.bannerChoice || {};
       var kit = room.kitChoice || {};
       var wig = room.wigChoice || {};
       var costumeUrls = room.costumeUrls || [];
       var stores = room.stores || {};
       html += '<div class="room-choices">';
       html += '<div class="room-choice-title">キャストの選択内容</div>';
-      html += '<div class="room-choice-row"><span>メールアドレス</span><span class="room-choice-val">' + (room.email ? escapeHtml(room.email) : '未入力') + '</span></div>';
-      html += '<div class="room-choice-row"><span>新人バナー</span><span class="room-choice-val">' + (banner.wantBanner === true ? '作成する' : (banner.wantBanner === false ? '作成しない' : '未回答')) + '</span></div>';
       html += '<div class="room-choice-row"><span>お仕事セット</span><span class="room-choice-val">' + (kit.type === 'shop' ? '事務所で購入' : (kit.type === 'own' ? '自分で用意' : '未回答')) + '</span></div>';
       var wigText = '未回答';
       if(wig.type === 'wig') wigText = 'ウィッグを使う';
@@ -705,6 +703,7 @@
 
       var storeNames = (globalStoreList || []).filter(function(s){ return stores[s.key]; }).map(function(s){ return s.label; });
       html += '<div class="room-choice-row"><span>在籍店舗</span><span class="room-choice-val">' + (storeNames.length ? escapeHtml(storeNames.join('、')) : '未設定') + '</span></div>';
+      html += '<div class="room-choice-row"><span>メールアドレス</span><span class="room-choice-val">' + (room.email ? escapeHtml(room.email) : '未入力') + '</span></div>';
 
       var hasCostume = costumeUrls.some(function(u){ return !!u; });
       if(hasCostume){
@@ -862,14 +861,15 @@
 
   function renderRoomCheckItem(roomId, key, meta, state, isClosed){
     var html = '<div class="room-check-item">';
-    var canClick = !isClosed && meta.owner !== 'readonly';
+    var canClick = !isClosed;
     if(canClick){
       html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + ' clickable" onclick="toggleStaffChecklist(\'' + roomId + '\',\'' + key + '\',' + (!state.done) + ', this)">' + (state.done ? '✓' : '') + '</div>';
     } else {
       html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
     }
     html += '<div class="room-check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
-    html += '<span class="room-check-ownerbadge ' + meta.owner + '">' + (meta.owner === 'cast' ? 'キャスト' : (meta.owner === 'staffOnly' ? '内勤専用' : (meta.owner === 'readonly' ? '既読状況' : '内勤'))) + '</span>';
+    var badgeText = meta.owner === 'cast' ? 'キャスト回答' : (meta.owner === 'staffOnly' ? '内勤専用' : 'キャストに表示');
+    html += '<span class="room-check-ownerbadge ' + meta.owner + '">' + badgeText + '</span>';
     html += '</div>';
     return html;
   }

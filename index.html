@@ -168,13 +168,14 @@
     flex-shrink:0;
   }
   .check-toggle:disabled{ opacity:0.4; cursor:default; }
-  .check-staff-badge{
+  .check-waiting-badge{
     font-size:10px;
-    color:#9C8B8F;
-    background:#eee;
+    color:#c9556a;
+    background:var(--pink-soft);
     border-radius:99px;
-    padding:2px 8px;
+    padding:3px 9px;
     flex-shrink:0;
+    font-weight:700;
   }
 
   /* 衣装アップロード */
@@ -644,6 +645,9 @@
         html += '<div class="check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
       }
       html += '<div class="check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
+      if(!isCast && !state.done){
+        html += '<span class="check-waiting-badge">内勤の確認待ち</span>';
+      }
       html += '</div>';
     });
     html += '</div>';
@@ -693,18 +697,6 @@
       html += '<p style="font-size:13px;color:var(--sub);">現在、掲載店舗は設定されていません。</p>';
     }
     html += '<div class="note-box" style="margin-top:8px;">キューティキューティ・逆アナル倶楽部・極門への在籍については、内勤と相談しながら決めています！ 気になる場合は気軽に聞いてください。</div>';
-    html += '</div>';
-
-    // 新人バナー
-    var banner = data.bannerChoice || {};
-    html += '<div class="section alt">';
-    html += '<div class="section-title">新人バナーについて</div>';
-    html += '<div class="self-choice-note">この項目はキャストさんご自身で選択お願いいたします</div>';
-    html += '<p style="font-size:12.5px;color:var(--sub);">作成すると、お客様に見つけてもらいやすくなります。作成する場合、在籍開始まで約2週間、作成しない場合は約1週間弱かかります。</p>';
-    html += '<div class="choice-row">';
-    html += '<button class="choice-btn ' + (banner.wantBanner === true ? 'selected' : '') + '" onclick="setBanner(true)">作成する</button>';
-    html += '<button class="choice-btn ' + (banner.wantBanner === false ? 'selected' : '') + '" onclick="setBanner(false)">作成しない</button>';
-    html += '</div>';
     html += '</div>';
 
     // お仕事セット
@@ -782,13 +774,11 @@
     <span class="step">業務委託契約書サイン</span><span class="arrow">→</span>
     <span class="step">撮影用衣装・靴 用意</span><span class="arrow">→</span>
     <span class="step">スタジオ撮影（必須）</span><span class="arrow">→</span>
-    <span class="step">新人バナー作成（希望者のみ）</span><span class="arrow">→</span>
     <span class="step">シフト提出</span><span class="arrow">→</span>
     <span class="step">在籍完成</span><span class="arrow">→</span>
     <span class="step">初出勤</span>
   </div>
-  <p>スタジオ撮影は必須で、自撮りでの在籍写真は不可となります。新人バナーは、このスタジオ撮影の写真素材を使用して作成します。</p>
-  <p><strong>新人バナー</strong>を作成するかどうかは、ご本人に選んでいただいています（「バック・進捗」タブでご回答ください）。作成すると、お客様に見つけてもらいやすくなります。作成される場合、撮影後<strong>約2週間</strong>で在籍開始となります（作成されない場合は撮影後<strong>約1週間弱</strong>で在籍開始）。</p>
+  <p>スタジオ撮影は必須で、自撮りでの在籍写真は不可となります。</p>
 </div>
 
 <div class="section alt2">
@@ -1412,24 +1402,6 @@
         note.textContent = '通信エラーが発生しました';
         note.style.color = '#c9556a';
       });
-  }
-
-  function setBanner(wantBanner){
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'setBannerChoice', id: roomId, wantBanner: wantBanner })
-    })
-      .then(function(res){ return res.json(); })
-      .then(function(result){
-        if(result.error){
-          alert('保存に失敗しました');
-          return;
-        }
-        currentData.bannerChoice = result.bannerChoice;
-        currentData.checklist = result.checklist;
-        renderRoom(currentData);
-      })
-      .catch(function(){ alert('通信エラーが発生しました'); });
   }
 
   function setKit(type){
