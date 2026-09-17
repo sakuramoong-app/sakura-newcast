@@ -213,6 +213,9 @@
     border-radius:8px;
     border:1px solid #ddd;
   }
+  .room-costume-thumb.thumb-error{
+    background:#f5f5f5;
+  }
 
   .room-comments{ margin-top:6px; max-height:200px; overflow-y:auto; }
   .room-comment{
@@ -497,7 +500,7 @@
         html += '<div class="room-costume-grid">';
         for(var ci=0; ci<3; ci++){
           if(costumeUrls[ci]){
-            html += '<a href="' + costumeUrls[ci] + '" target="_blank"><img src="' + costumeUrls[ci] + '" class="room-costume-thumb" alt="衣装' + (ci+1) + '"></a>';
+            html += '<a href="' + costumeUrls[ci] + '" target="_blank"><img src="' + costumeUrls[ci] + '" class="room-costume-thumb" alt="衣装' + (ci+1) + '" onerror="this.src=\'\'; this.alt=\'表示不可\'; this.classList.add(\'thumb-error\');"></a>';
           }
         }
         html += '</div>';

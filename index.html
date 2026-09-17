@@ -202,6 +202,14 @@
     width:100%; height:100%;
     object-fit:cover;
   }
+  .costume-fallback{
+    width:100%; height:100%;
+    align-items:center; justify-content:center;
+    background:var(--mint-soft);
+    flex-direction:column;
+    gap:4px;
+  }
+  .costume-fallback .txt{ font-size:10.5px; color:#2c5b45; font-weight:700; }
   .costume-slot .plus{ font-size:24px; color:var(--pink); }
   .costume-slot .txt{ font-size:10.5px; color:var(--sub); }
   .costume-slot input[type=file]{ display:none; }
@@ -391,7 +399,8 @@
       var url = urls[i] || '';
       html += '<label class="costume-slot" id="costumeSlot' + i + '">';
       if(url){
-        html += '<img src="' + url + '" alt="衣装' + (i+1) + '">';
+        html += '<img src="' + url + '" alt="衣装' + (i+1) + '" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">';
+        html += '<div class="costume-fallback" style="display:none;"><span class="txt">アップロード済み</span></div>';
       } else {
         html += '<span class="plus">＋</span><span class="txt">' + (i+1) + '着目</span>';
       }
