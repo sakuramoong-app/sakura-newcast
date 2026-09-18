@@ -18,12 +18,29 @@
     --ink:#5C4B4F;
     --sub:#9C8B8F;
   }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#FAF7F5 !important;
+      --pink:#F2A6B3 !important;
+      --pink-soft:#FDEDF0 !important;
+      --lav:#B9A6D9 !important;
+      --lav-soft:#F1EAFA !important;
+      --mint:#7FC8AA !important;
+      --mint-soft:#E6F6EE !important;
+      --ink:#5C4B4F !important;
+      --sub:#9C8B8F !important;
+    }
+    html, body{
+      background:#FAF7F5 !important;
+      color:#5C4B4F !important;
+    }
+  }
   *{ box-sizing:border-box; }
   html, body{
     margin:0;
     font-family: -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Yu Gothic", Roboto, sans-serif;
-    background:var(--bg);
-    color:var(--ink);
+    background:#FAF7F5 !important;
+    color:#5C4B4F !important;
     line-height:1.7;
   }
   body{
@@ -41,7 +58,7 @@
     padding:4px 16px;
     border-radius:99px;
   }
-  h1{ font-size:21px; margin:10px 0 6px; font-weight:800; }
+  h1{ font-size:21px; margin:10px 0 6px; font-weight:800; color:#5C4B4F; }
   .lead{ font-size:12.5px; color:var(--sub); }
 
   .card{
@@ -51,7 +68,7 @@
     margin-bottom:18px;
     box-shadow:0 3px 12px rgba(217,160,180,.14);
   }
-  .card-title{ font-size:15px; font-weight:800; margin-bottom:14px; }
+  .card-title{ font-size:15px; font-weight:800; margin-bottom:14px; color:#5C4B4F; }
   .card-title-row{
     display:flex;
     align-items:center;
@@ -181,7 +198,7 @@
     padding:0 16px 16px;
   }
   .room-body.show{ display:block; }
-  .room-name{ font-size:14.5px; font-weight:800; margin-bottom:4px; }
+  .room-name{ font-size:14.5px; font-weight:800; margin-bottom:4px; color:var(--ink); }
   .room-meta{ font-size:11.5px; color:var(--sub); margin-bottom:8px; }
   .room-actions{ display:flex; gap:8px; }
   .room-actions button{
