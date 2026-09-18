@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light only">
 <title>ご入店にあたってのご説明</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     color-scheme: light;
@@ -24,7 +22,7 @@
   * { box-sizing: border-box; }
   html, body{
     margin:0;
-    font-family: 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif;
+    font-family: -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Yu Gothic", Roboto, sans-serif;
     color:var(--ink);
     font-size:15px;
     line-height:1.75;
@@ -110,7 +108,7 @@
     text-align:center;
     font-size:11px;
     color:var(--sub);
-    margin-top:24px;
+    margin-top:10px;
     padding:10px;
   }
 
@@ -696,6 +694,7 @@
     html += '<h1>ご入店にあたってのご説明</h1>';
     html += '<p class="to">キャスト名：<strong>' + escapeHtml(data.castName) + '</strong> 様</p>';
     html += '<p class="lead">面接時にご説明した内容をまとめました。わからないことがあれば、いつでも店舗までご質問ください。</p>';
+    html += '<div class="closing-note">※このページは在籍作成が完了次第、予告なく閉鎖します。</div>';
     html += '</div>';
 
     // タブメニュー
@@ -729,7 +728,6 @@
     } else if(currentTab === 'memo'){
       html = renderTabMemo(currentData);
     }
-    html += '<div class="closing-note">※このページは在籍作成が完了次第、予告なく閉鎖します。</div>';
     document.getElementById('tabContent').innerHTML = html;
   }
 
@@ -1219,6 +1217,7 @@
       <li>「一緒にいたいな」「レア○○」「○時まで限定公開」など惹かれるタイトルに</li>
       <li>疑問形で問いかけると反応UP</li>
       <li>限定日記・お礼日記・口コミお礼日記は必須級！</li>
+      <li>ポジティブで可愛い内容の発信をお願いします✨</li>
     </ul>
     <div class="roadmap-example">例：「今日の下着は何色でしょう？ オキニトークで教えるね、マイガール登録してね！」</div>
     <button class="glossary-btn" onclick="showGlossary('diary')">写メ日記とは？</button>
@@ -1236,6 +1235,7 @@
       <li>写メ日記3本に1本は投稿しよう！</li>
       <li>動画は写メ日記の2倍アクセス ✨</li>
       <li>声出し・下着チラ見せで惹きつける（背景を暗くして声に集中させるのが◎）</li>
+      <li>ポジティブで可愛い内容の発信をお願いします✨</li>
     </ul>
     <div class="roadmap-example">例：「○時まで限定！ 初声出し！」でレア感を演出</div>
     <button class="glossary-btn" onclick="showGlossary('videoDiary')">動画日記とは？</button>
