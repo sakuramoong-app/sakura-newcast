@@ -592,6 +592,41 @@
     color:var(--ink);
     line-height:1.8;
   }
+
+  .note-box{
+    background:var(--lav-soft);
+    border-radius:12px;
+    padding:10px 13px;
+    font-size:12.5px;
+    color:#6c5896;
+    line-height:1.7;
+  }
+
+  .store-list{ display:flex; flex-direction:column; gap:8px; }
+  .store-item{
+    background:#fff;
+    border-radius:12px;
+    padding:10px 13px;
+  }
+  .store-name{
+    font-size:13px;
+    font-weight:800;
+    color:var(--ink);
+    margin-bottom:3px;
+  }
+  .store-link{
+    font-size:11.5px;
+    color:#c9556a;
+    word-break:break-all;
+    text-decoration:none;
+  }
+  .store-link:active, .store-link:hover{ text-decoration:underline; }
+  .store-note{
+    font-size:11.5px;
+    color:var(--sub);
+    margin-top:5px;
+    line-height:1.6;
+  }
 </style>
 </head>
 <body>
@@ -722,6 +757,7 @@
     html += '<button class="tab-btn' + (currentTab === 'progress' ? ' active' : '') + '" onclick="switchTab(\'progress\')">バック・進捗</button>';
     html += '<button class="tab-btn' + (currentTab === 'guide' ? ' active' : '') + '" onclick="switchTab(\'guide\')">新人ガイド</button>';
     html += '<button class="tab-btn' + (currentTab === 'roadmap' ? ' active' : '') + '" onclick="switchTab(\'roadmap\')">姫デコロードマップ</button>';
+    html += '<button class="tab-btn' + (currentTab === 'repeater' ? ' active' : '') + '" onclick="switchTab(\'repeater\')">リピーター獲得</button>';
     html += '<button class="tab-btn' + (currentTab === 'memo' ? ' active' : '') + '" onclick="switchTab(\'memo\')">メモ</button>';
     html += '</div>';
 
@@ -745,6 +781,8 @@
       html = renderTabGuide(currentData);
     } else if(currentTab === 'roadmap'){
       html = renderTabRoadmap(currentData);
+    } else if(currentTab === 'repeater'){
+      html = renderTabRepeater(currentData);
     } else if(currentTab === 'memo'){
       html = renderTabMemo(currentData);
     }
@@ -1169,19 +1207,56 @@
 
 <div class="section alt2">
   <div class="section-title">店舗について</div>
-  <p>サクラムーングループと他2店舗運営しております。</p>
-  <p><strong>サクラムーングループ：</strong><br>サクラムーン池袋、Lana鶯谷、Lana錦糸町、ピーチムーン五反田、ドレスガーデン渋谷、キューティー、逆アナル倶楽部</p>
-  <ul>
-    <li><strong>キューティー：</strong>お客様を女装させて女装レズコース専門のお店です</li>
-    <li><strong>逆アナル倶楽部：</strong>逆AFが得意な子に在籍していただいています</li>
-  </ul>
-  <p><strong>その他：</strong><br>エイティーン、極門</p>
-  <ul>
-    <li><strong>エイティーン：</strong>ダミー店。学園系のコンセプトのお店です</li>
-    <li><strong>極門：</strong>こちらもダミー店。SM専門なので、SMが得意な子にお願いしています</li>
-  </ul>
-  <div class="note-box" style="margin-top:8px;">
-    <strong>ダミー店とは：</strong>ダミーキャストAさんとして、雰囲気が似ているキャストさんがAさんとしてお仕事に行くイメージです。
+
+  <p><strong>◆サクラムーングループ◆</strong></p>
+  <div class="store-list">
+    <div class="store-item">
+      <div class="store-name">サクラムーン池袋店</div>
+      <a class="store-link" href="https://www.sakura-moon.com/" target="_blank">https://www.sakura-moon.com/</a>
+    </div>
+    <div class="store-item">
+      <div class="store-name">ラナ鶯谷店</div>
+      <a class="store-link" href="https://www.josou-lana.com/" target="_blank">https://www.josou-lana.com/</a>
+    </div>
+    <div class="store-item">
+      <div class="store-name">ラナ錦糸町店</div>
+      <a class="store-link" href="https://www.lana-kinshicho.com/" target="_blank">https://www.lana-kinshicho.com/</a>
+    </div>
+    <div class="store-item">
+      <div class="store-name">ドレスガーデン渋谷</div>
+      <a class="store-link" href="https://www.dress-garden-shibuya.com/" target="_blank">https://www.dress-garden-shibuya.com/</a>
+    </div>
+    <div class="store-item">
+      <div class="store-name">ピーチムーン五反田店</div>
+      <a class="store-link" href="https://www.peach-m.com/" target="_blank">https://www.peach-m.com/</a>
+    </div>
+    <div class="store-item">
+      <div class="store-name">逆アナル倶楽部</div>
+      <a class="store-link" href="https://www.gyaku-anal-club.com/" target="_blank">https://www.gyaku-anal-club.com/</a>
+      <div class="store-note">※逆AF専門店　逆AFがOK！でしたら在籍可能です！ ご相談ください😊</div>
+    </div>
+    <div class="store-item">
+      <div class="store-name">キューティーキューティ</div>
+      <a class="store-link" href="https://www.cutie-josou.com/" target="_blank">https://www.cutie-josou.com/</a>
+      <div class="store-note">※お客様が女装する女装レズ専門店　抵抗なければ在籍可能です！ ご相談ください😊</div>
+    </div>
+  </div>
+
+  <div class="note-box" style="margin-top:10px;">
+    系列ではない体で運営しています。この二店舗はダミーと言って3サイズや雰囲気が似ている子としてお仕事に行っていただくお店です。仕事内容はサクラムーングループと基本的に変わりません。
+  </div>
+
+  <div class="store-list" style="margin-top:10px;">
+    <div class="store-item">
+      <div class="store-name">エイティーン</div>
+      <a class="store-link" href="https://www.18-josokko-gakuen.com/" target="_blank">https://www.18-josokko-gakuen.com/</a>
+      <div class="store-note">※学園系のお店です。</div>
+    </div>
+    <div class="store-item">
+      <div class="store-name">極門</div>
+      <a class="store-link" href="https://www.gokumon-sm.com/" target="_blank">https://www.gokumon-sm.com/</a>
+      <div class="store-note">※SM店　お仕事慣れて来て、Sプレイがかなりできれば在籍OKです！ ご相談ください😊</div>
+    </div>
   </div>
 </div>
 
@@ -1330,6 +1405,123 @@
     <div class="read-check-label">姫デコロードマップを読みました</div>
   </div>
   <div class="save-note" id="roadmapReadNote"></div>
+</div>
+`;
+    return html;
+  }
+
+  function renderTabRepeater(data){
+    var html = `
+<div class="roadmap-hero" style="background:linear-gradient(160deg, #B9A6D9, #F2A6B3);">
+  <div class="roadmap-hero-kicker">💗 リピーターの獲得について 💗</div>
+  <div class="roadmap-hero-title">また来たいと<br>思ってもらうために</div>
+</div>
+
+<div class="section alt3">
+  <p>接客に真面目に取り組んで同じお客様がまた来てくれると嬉しいものです。</p>
+  <p>新規のお客様に対して、「この人はこういうのが好きなのかな、これはどうかな…」と神経を最大限に張り巡らせるよりも、「このお客様は、こういうプレイが好きだったな」とわかるリピーターさんに接客をする方が、心の余裕も生まれます。</p>
+  <p>また、月単位でみれば稼げる金額の大きな底上げにもなります。リピーターが多いキャストはお店側もしっかり仕事しているキャストと認識しますので、お客様にも自信をもってオススメできるのでお給料に大きく関わってきます。</p>
+  <p>リピーターを獲得することは容易ではありませんが、出来ることをひとつずつこなしていくことで確率が高まっていきます。</p>
+</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">1</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">服装や外見に気を遣う</div>
+    <p>人は見た目が9割という本が大ヒットするほど、第一印象は重要ですので、どれだけサービスがよかったとしても、見た目が残念であればリピートはまずありえません。ここで言う見た目とは、元々の顔の話ではなく服装やメイクの良し悪しによる全体的な雰囲気のことです。</p>
+    <p>清潔感がなかったり、メイクがおかしかったり、コーディネイトが女性らしくなく不自然だったり、ウィッグが古くなりバサバサだったり、ムダ毛の処理が不十分だったり等——上記項目に問題がないことは大前提となるので、出来てない人はまずここをなんとかしましょう。</p>
+    <div class="roadmap-example">
+      <strong>🌠服装のポイント</strong><br>
+      ・個性的すぎない（派手すぎない）こと<br>
+      ・カジュアルすぎないこと<br>
+      ・白・ピンク・水色・花柄といった女性らしい色彩や柄を用いていること<br>
+      ・ウエストが引き締まっている、脚が出ているなど適度に女性の身体のラインがわかるもの<br>
+      ・ヒールなどの体型を補正して見せてくれるグッズを使っていること<br>
+      ※パンツスタイルはご遠慮ください
+    </div>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">2</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">においのケア</div>
+    <p><strong>🌠口臭</strong><br>会話中、プレイ中に口臭が気になられてしまうとリピートはかなり厳しくなります。出勤中にニンニクやニラ、ネギなど口臭の残るものは食べないというのは常識です。指名がとれる嬢が常に行っているのが歯磨きと洗口剤（リステリン）などの併用です。フリスクだけでは弱いです。</p>
+    <p><strong>🌠香水</strong><br>匂いがお客様に移ってしまうので、強すぎるのはNG。ほんのり良い香りがするくらいがベストです。ウィッグや服の匂いにも気をつかいましょう。</p>
+    <p><strong>🌠タバコ</strong><br>タバコの臭いも香水と同様、好ましく思われない臭いの1つです。お客様の前で吸わないということはもちろんですが、リピートに結びつくキャストは、待機所でタバコの臭いを消臭スプレーなどで消してから接客に臨んでいる傾向が見られました。</p>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">3</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">サービス地雷をしない</div>
+    <p>それ相応のお金を支払った上でサービスを提供するのですから、手抜きをしないというのは至極当然のことですが、数ある「手抜き」の中でも次の手抜きをしてしまうと、「萎えてしまって次に指名しようとは思わない」というお客様が多いです。</p>
+    <p><strong>A. 時短（サービス時間の短縮）</strong><br>「60分のサービス料金を支払ったはずなのにサービスを30分で切り上げられてしまった」等——このようなサービスをされてしまった日には、リピートどころかそのお店自体のリピートもなくなります。抜けばいいという考えはやめてください。時間いっぱいお客さんに楽しんでもらう、という考えがリピートに繋がります。時短接客は確実にお客さんにバレますので、基本的にまた指名してくれる事はありません。</p>
+    <p><strong>B. 自然な挨拶ができない</strong><br>業務的にも、営業的にもなりすぎず、自然な笑顔で礼儀正しく挨拶する。テクニックが十分でなくとも愛嬌をもって接すればカバーできます。</p>
+    <p><strong>C. 「疲れている」雰囲気を出さない</strong><br>お客さんにはまったく関係のない事です。その日4人目の接客で疲れているとしても常に笑顔を心がけて下さい。それだけで指名本数が変わります。</p>
+    <p><strong>D. お客様の前で愚痴を言わない</strong><br>お店の愚痴、他の女の子の愚痴、天候や電車の遅延等——愚痴を言っている自分の印象しか悪くなりません。</p>
+    <p><strong>E. 規則正しく出勤する</strong><br>出勤予定通りに必ず来てくれるキャストの方が信頼して指名できます。リピートがもらえる嬢はあえて「何曜日の何時から」と規則的な曜日・時間帯に出勤しています。「お客様中心の時間帯」で出勤を心がけましょう。</p>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">4</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">お客様への接し方</div>
+    <ul class="roadmap-heart-list">
+      <li>お客様と出会った時、営業スマイルではなく、ごく自然な笑顔であいさつができる</li>
+      <li>たとえ興味のないお話をお客様がなさっていても、興味がある風に耳を傾け、必要な所だけ自分の意見を言う</li>
+      <li>聞かれてもいないのに自分の話をペラペラ話された時点でお客様は嫌な予感しかしません</li>
+      <li>プレイ中は多少の演技も必要です。気持ち良ければやや大げさに反応してみましょう</li>
+    </ul>
+    <p>お客様のことを「好き」と思いこむ位で相手に好感を抱かせる接客が出来ると思います。</p>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">5</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">プレイテクニックを磨く</div>
+    <p>逆AFは強烈な快感を与えることができるので極めることが出来ればリピーターに繋げやすいです。どうやったらより快感を与えられるかを自分で調べたり、プレイ中に試行錯誤してください。乳首を同時に責める等、フェラ一つとってもお客様により丁度良さは違います。</p>
+    <p>ソフトなフェラが好きなお客様もいらっしゃるのでいきなり激しくやるのではなくソフト目から探りながらやってみましょう。強さやスピードの強弱やじらしたりの緩急をつけることも必要です。なんならお客様に聞いてしまうのも一つの手です。ネット等でいくらでもヒントは転がっています。なにか一つはこれだけは負けないという武器を身につけるべく頑張りましょう。</p>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">6</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">営業メール（LINE）</div>
+    <p>連絡先（LINEやXのアカウント）を教える事の出来る人は大きな武器となります。全員に教える必要はありません。この人頻繁に来てくれそうで（お金持ち）すごくいい人だな、また来てほしい人だな、という場合は教えてしまうのもアリです。出勤前日くらいに「明日出勤しますので良かったら来てね！」等送信すると何人かに一人は来てくれたりすることもあります。</p>
+    <div class="roadmap-example">
+      但し、あまり仲良くなりすぎてお店を通さず外で会ったりすると厳罰が処されますので注意してください。<br>
+      ※新人さんはお仕事に慣れて来たらにした方が◎
+    </div>
+  </div>
+</div>
+<div class="roadmap-arrow">▼</div>
+
+<div class="roadmap-step">
+  <div class="roadmap-step-badge">7</div>
+  <div class="roadmap-step-card">
+    <div class="roadmap-step-title">雰囲気</div>
+    <p>事務的な接客はリピート率を大きく下げます。一般的に仕事はテキパキできた方が良いですが、風俗の接客においてはマイナス要素にもなり得ます。プレイの準備まではテキパキ、プレイに入ったら「恥じらい」「エロさ」を意識しましょう。</p>
+    <p>キスはお客様のスイッチを入れるつもりで（自分も）雰囲気を出して、手コキならイヤラシイ手つきであったり淫語責めをしながらだったり、お客様主導であるなら色んな局面で恥ずかしがるかガマンできないといった欲しがり感を出しましょう。トロンとした目つきや、ややオーバーなリアクションで気持ちよさをアピールしてください。</p>
+    <p>自然にエロさを出せない人は演技やプレイに没頭できるかどうかがとても重要になります。サバサバした感じでトークで盛り上がるのはプレイ後にしましょう。</p>
+  </div>
+</div>
+
+<div class="roadmap-goal">
+  <div class="roadmap-goal-badge">💗 最後に</div>
+  <div class="roadmap-goal-note" style="border-top:none;padding-top:0;">
+    他にも色んな要素があり、お客様のタイプも千差万別でまたキャストの個性もあり、工夫次第では上記以上のサービスを提供することも十分可能です。お客様は性的な欲求を満たしにやってきます。性的な感情が高まった時に思い出してもらえるプレイが出来るように試行錯誤しましょう。なにか分からなかったらお店側に相談してください。<br><br>
+    以上、多くのポイントがありますが出来る事から始めてたくさんのお客様に喜んでいただき、また来ていただけるよう頑張り、たくさん稼いでください！
+  </div>
 </div>
 `;
     return html;
