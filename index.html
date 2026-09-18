@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
 <title>ご入店にあたってのご説明</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
+    color-scheme: light;
     --bg:#FAF7F5;
     --paper:#fff;
     --ink:#5C4B4F;
@@ -511,6 +513,66 @@
     line-height:1.7;
     border-top:1px solid rgba(255,255,255,.4);
     padding-top:10px;
+  }  .glossary-btn{
+    display:inline-block;
+    font-size:11px;
+    font-weight:800;
+    color:#c9556a;
+    background:#fff;
+    border:1.5px solid var(--pink);
+    padding:4px 11px;
+    border-radius:99px;
+    cursor:pointer;
+    margin:4px 5px 0 0;
+  }
+
+  .glossary-modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(92,75,79,.5);
+    z-index:100;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .glossary-modal.show{ display:flex; }
+  .glossary-modal-inner{
+    background:#fff;
+    border-radius:18px;
+    max-width:440px;
+    width:100%;
+    max-height:80vh;
+    overflow-y:auto;
+    padding:18px 20px;
+  }
+  .glossary-modal-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .glossary-modal-title{
+    font-size:15px;
+    font-weight:800;
+    color:var(--ink);
+    line-height:1.5;
+  }
+  .glossary-modal-close{
+    border:none;
+    background:#F0E8E6;
+    color:var(--sub);
+    width:26px; height:26px;
+    border-radius:50%;
+    font-size:15px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .glossary-modal-body{
+    font-size:13px;
+    color:var(--ink);
+    line-height:1.8;
   }
 </style>
 </head>
@@ -523,11 +585,65 @@
   </div>
 </div>
 
+<div id="glossaryModal" class="glossary-modal">
+  <div class="glossary-modal-inner">
+    <div class="glossary-modal-head">
+      <div class="glossary-modal-title" id="glossaryTitle"></div>
+      <button class="glossary-modal-close" onclick="closeGlossary()">×</button>
+    </div>
+    <div class="glossary-modal-body" id="glossaryBody"></div>
+  </div>
+</div>
+
 <script>
   var GAS_URL = 'https://script.google.com/macros/s/AKfycbxKWQsxsX2SJ0cZ7YfxZJgW1ujmM8xRvrNcjcDYpohI6Gqkem1BhiqVO0PcU8KjjMnf/exec';
   var roomId = null;
   var currentData = null;
   var currentTab = 'progress';
+
+  var GLOSSARY = {
+    himedeco: {
+      title: '🌸 ヘブンの姫デコとは？',
+      body: '「ヘブン」という風俗情報サイトで、日記の投稿・マイガールの管理・アクセス確認・メッセージなどができる、キャストさん専用の管理ツールです。<br><br>出勤中の集客やお客様とのやり取りに欠かせない、大切なツールです。<br><br>💡 基本的にログインはサクラムーンでお願いします。サクラムーンから日記を投稿することで、全10媒体への同時投稿が可能になります。'
+    },
+    diary: {
+      title: '📸 写メ日記とは？また、その重要性とは？',
+      body: '写真と文章を投稿して、お客様に自分のことを知ってもらうための大切なツールです。<br>人柄や雰囲気を知ってもらうことで、興味や安心感につながり、予約のきっかけになります✨<br><br>ヘブンの姫デコから投稿し、全部で10媒体に同じ写メ日記を同時投稿することができます。'
+    },
+    mygirl: {
+      title: '💗 マイガールとは？',
+      body: 'お客様が「気になる！」と思ったキャストさんをお気に入り登録できる機能です。<br><br>登録してくれる方が増えるほど、日記や出勤情報を見てもらえる機会も増えていきます。'
+    },
+    mygirlDiary: {
+      title: '🔐 マイガール限定日記とは？',
+      body: 'マイガール登録をしてくれているお客様だけが見ることのできる限定の日記です。<br>少し特別な内容を投稿することで、マイガール登録をしてくれている方との距離を縮めるきっかけになります。<br><br>※この投稿はサクラムーンのヘブンにのみ投稿され、他媒体には同時投稿されません。それでも集客につながる大切な機能なので、ぜひ積極的に取り組んでほしいです✨'
+    },
+    videoDiary: {
+      title: '🎥 動画日記とは？',
+      body: '動画を使って、写真だけでは伝わりにくい雰囲気や魅力を伝えられる日記です。<br>声や話し方、仕草なども伝わるので、お客様により自分らしさを知ってもらえます。<br><br>※この投稿はサクラムーンのヘブンにのみ投稿され、他媒体には同時投稿されません。こちらも大切な集客ツールのひとつなので、ぜひ積極的に取り組んでほしいです✨'
+    },
+    mitene: {
+      title: '👀 ミテネとは？',
+      body: 'お客様に「私のページも見てね！」とアピールできる機能です。<br><br>自分からアクションすることで、プロフィールや日記を見てもらうきっかけを増やせます。'
+    },
+    okinitalk: {
+      title: '💬 オキニトークとは？',
+      body: 'お客様とメッセージでやり取りができる機能です。<br><br>気軽な会話を重ねながら自分のことを知ってもらい、予約につながるきっかけを作ることができます。'
+    }
+  };
+
+  function showGlossary(key){
+    var item = GLOSSARY[key];
+    if(!item) return;
+    document.getElementById('glossaryTitle').textContent = item.title;
+    document.getElementById('glossaryBody').innerHTML = item.body;
+    document.getElementById('glossaryModal').classList.add('show');
+  }
+
+  function closeGlossary(){
+    document.getElementById('glossaryModal').classList.remove('show');
+  }
+
 
   function getParam(name){
     var params = new URLSearchParams(window.location.search);
@@ -749,6 +865,43 @@
     html += '</ul>';
     html += '</div>';
 
+    // 店舗別バック（キューティキューティ）
+    var storesForBack = data.stores || {};
+    var backCutie = data.backCutie || {};
+    if(storesForBack.cutie && (backCutie.back60 || backCutie.back90 || backCutie.back120)){
+      html += '<div class="section alt3">';
+      html += '<div class="section-title">キューティキューティ バックについて</div>';
+      html += '<table class="back-table">';
+      html += '<tr><th>コース</th><th style="text-align:right;">バック金額</th></tr>';
+      html += '<tr><td>60分コース</td><td class="amount">' + formatYen(backCutie.back60) + '</td></tr>';
+      html += '<tr><td>90分コース</td><td class="amount">' + formatYen(backCutie.back90) + '</td></tr>';
+      html += '<tr><td>120分コース</td><td class="amount">' + formatYen(backCutie.back120) + '</td></tr>';
+      html += '</table>';
+      html += '<ul class="extra-list">';
+      html += '<li><span>本指名バック（60分）</span><span>' + formatYen(backCutie.backHonshimei60) + '</span></li>';
+      html += '<li><span>本指名バック（90分以上）</span><span>' + formatYen(backCutie.backHonshimei90) + '</span></li>';
+      html += '</ul>';
+      html += '</div>';
+    }
+
+    // 店舗別バック（極門）
+    var backGokumon = data.backGokumon || {};
+    if(storesForBack.gokumon && (backGokumon.back60 || backGokumon.back90 || backGokumon.back120)){
+      html += '<div class="section alt3">';
+      html += '<div class="section-title">極門 バックについて</div>';
+      html += '<table class="back-table">';
+      html += '<tr><th>コース</th><th style="text-align:right;">バック金額</th></tr>';
+      html += '<tr><td>60分コース</td><td class="amount">' + formatYen(backGokumon.back60) + '</td></tr>';
+      html += '<tr><td>90分コース</td><td class="amount">' + formatYen(backGokumon.back90) + '</td></tr>';
+      html += '<tr><td>120分コース</td><td class="amount">' + formatYen(backGokumon.back120) + '</td></tr>';
+      html += '</table>';
+      html += '<ul class="extra-list">';
+      html += '<li><span>本指名バック（60分）</span><span>' + formatYen(backGokumon.backHonshimei60) + '</span></li>';
+      html += '<li><span>本指名バック（90分以上）</span><span>' + formatYen(backGokumon.backHonshimei90) + '</span></li>';
+      html += '</ul>';
+      html += '</div>';
+    }
+
     // メールアドレス
     html += '<div class="section alt">';
     html += '<div class="section-title">メールアドレス</div>';
@@ -765,7 +918,7 @@
   }
 
   function renderTabGuide(data){
-    var guideRead = !!data.guideRead;
+    var guideRead = !!(data.checklist && data.checklist.guideReadByCast && data.checklist.guideReadByCast.done);
     var html = `
 <div class="section">
   <div class="section-title">初出勤までの流れ</div>
@@ -1032,7 +1185,7 @@
   }
 
   function renderTabRoadmap(data){
-    var roadmapRead = !!data.roadmapRead;
+    var roadmapRead = !!(data.checklist && data.checklist.roadmapReadByCast && data.checklist.roadmapReadByCast.done);
     var html = `
 <div class="roadmap-hero">
   <div class="roadmap-hero-kicker">🌸 SAKURA MOON GROUP</div>
@@ -1041,6 +1194,7 @@
 </div>
 
 <div class="section alt3">
+  <p><strong>姫デコとは？</strong><br>各風俗媒体において、写真付きの日記を投稿する習慣のことです。写メ日記・動画日記・マイガール・オキニトークなど、いくつかの機能をまとめてこう呼んでいます。</p>
   <p>今は風俗業界でも、キャストを"推し"として見るお客様が増えています。写メ日記・動画・マイガール登録などの活動はインフルエンサーレベル(IL)として数値化され、ILが高いほど予約に直結する時代です。</p>
   <p>このロードマップの通りに動けば、着実にファンが増えていきます◎</p>
   <div class="roadmap-start-label">START！ まずは基本の発信から</div>
@@ -1051,6 +1205,7 @@
   <div class="roadmap-step-card">
     <div class="roadmap-step-title">🔑 姫デコ（サクラ）にログイン</div>
     <p>まずはサクラムーンでログイン！ ここが全ての入口です。写メ日記はサクラムーンを基盤に他媒体へ同時投稿されるので、基本はサクラムーンでの操作を忘れずに。</p>
+    <button class="glossary-btn" onclick="showGlossary('himedeco')">ヘブンの姫デコとは？</button>
   </div>
 </div>
 <div class="roadmap-arrow">▼</div>
@@ -1066,6 +1221,9 @@
       <li>限定日記・お礼日記・口コミお礼日記は必須級！</li>
     </ul>
     <div class="roadmap-example">例：「今日の下着は何色でしょう？ オキニトークで教えるね、マイガール登録してね！」</div>
+    <button class="glossary-btn" onclick="showGlossary('diary')">写メ日記とは？</button>
+    <button class="glossary-btn" onclick="showGlossary('mygirl')">マイガールとは？</button>
+    <button class="glossary-btn" onclick="showGlossary('mygirlDiary')">マイガール限定日記とは？</button>
   </div>
 </div>
 <div class="roadmap-arrow">▼</div>
@@ -1080,6 +1238,7 @@
       <li>声出し・下着チラ見せで惹きつける（背景を暗くして声に集中させるのが◎）</li>
     </ul>
     <div class="roadmap-example">例：「○時まで限定！ 初声出し！」でレア感を演出</div>
+    <button class="glossary-btn" onclick="showGlossary('videoDiary')">動画日記とは？</button>
   </div>
 </div>
 <div class="roadmap-arrow">▼</div>
@@ -1107,6 +1266,7 @@
     </ul>
     <p>会員へ直接届くアプローチ。既読率が高い＝マッチ率UP！ 毎出勤押すのが効果的です。</p>
     <div class="roadmap-example">例：「○○が大好きなの、一緒の人いる？ いたら教えてね♡」</div>
+    <button class="glossary-btn" onclick="showGlossary('mitene')">ミテネとは？</button>
   </div>
 </div>
 <div class="roadmap-arrow">▼</div>
@@ -1122,6 +1282,7 @@
       <li>トーク画面右下のカレンダーからネット予約に誘導できる</li>
     </ul>
     <div class="roadmap-example">例：「登録ありがとうございます！ 私は○○が得意です、おにいさんは○○好きですか？」</div>
+    <button class="glossary-btn" onclick="showGlossary('okinitalk')">オキニトークとは？</button>
   </div>
 </div>
 <div class="roadmap-arrow">▼</div>
