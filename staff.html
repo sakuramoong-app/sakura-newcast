@@ -949,7 +949,7 @@
     var html = '<div class="accordion">';
     html += '<div class="accordion-header" onclick="toggleAccordion(\'' + accId + '\')">';
     html += '<span class="accordion-title">' + title + '</span>';
-    html += '<span class="accordion-progress">' + doneCount + '/' + totalCount + '</span>';
+    html += '<span class="accordion-progress" id="accordion-progress-' + accId + '">' + doneCount + '/' + totalCount + '</span>';
     html += '<span class="accordion-caret" id="caret' + accId + '">▾</span>';
     html += '</div>';
     html += '<div class="accordion-body" id="acc' + accId + '">' + innerHtml + '</div>';
@@ -1061,8 +1061,41 @@
   }
 
   function updateAccordionProgressCounts(){
-    // 簡易的に全体を再描画せず、開いているアコーディオンの状態を保ったまま件数だけ更新したい場合はここを拡張。
-    // 現状は次回のloadRoomsQuietlyで正しい値に揃うため、ここでは何もしない（体感速度優先で見た目のチェックは即時反映済み）。
+    // 全件再取得はせず、既にローカルにある lastRoomsData から進捗を再計算し、
+    // 該当する数字・バーの表示だけをその場で書き換える（軽量・高速）。
+    var metaKeys = Object.keys(globalChecklistMeta);
+    var castKeys = metaKeys.filter(function(k){ return globalChecklistMeta[k].owner !== 'staffOnly'; });
+    var staffOnlyKeys = metaKeys.filter(function(k){ return globalChecklistMeta[k].owner === 'staffOnly'; });
+
+    lastRoomsData.forEach(function(room, idx){
+      var checklist = room.checklist || {};
+      var doneCount = metaKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
+      var pct = metaKeys.length ? Math.round(doneCount / metaKeys.length * 100) : 0;
+      var castDoneCount = castKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
+      var staffOnlyDoneCount = staffOnlyKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
+
+      var roomItem = document.getElementById('roomItem' + idx);
+      if(!roomItem) return;
+
+      var metaEl = roomItem.querySelector('.room-meta');
+      if(metaEl){
+        var isClosed = room.status !== 'active';
+        metaEl.textContent = '作成：' + formatDate(room.createdAt) + (isClosed ? ' ／ 終了：' + formatDate(room.closedAt) : '') + '　／　全体進捗 ' + doneCount + '/' + metaKeys.length;
+      }
+      var fillEl = roomItem.querySelector('.room-progress-fill');
+      if(fillEl){
+        fillEl.style.width = pct + '%';
+      }
+
+      var castProgress = document.getElementById('accordion-progress-cast' + idx);
+      if(castProgress){
+        castProgress.textContent = castDoneCount + '/' + castKeys.length;
+      }
+      var staffOnlyProgress = document.getElementById('accordion-progress-staffonly' + idx);
+      if(staffOnlyProgress){
+        staffOnlyProgress.textContent = staffOnlyDoneCount + '/' + staffOnlyKeys.length;
+      }
+    });
   }
 
   function renderRoomCheckItem(roomId, key, meta, state, isClosed){
@@ -1115,8 +1148,11 @@
           loadRooms();
           return;
         }
-        // 成功時はバックグラウンドで一覧を静かに更新（進捗バーの数字などを合わせるため）
-        loadRoomsQuietly();
+        // サーバーの最新checklistをローカルに反映し、進捗数だけ軽量に更新する（全件再取得はしない）
+        if(room && result.checklist){
+          room.checklist = result.checklist;
+        }
+        updateAccordionProgressCounts();
       })
       .catch(function(){
         if(room) room.checklist[key] = { done: prevState, at: '' };
@@ -1254,6 +1290,13 @@
       document.getElementById('tokenInput').value = stored;
     }
   })();
+
+  // 合言葉入力欄でEnterキーを押したらログインする（PCでの利用を想定）
+  document.getElementById('tokenInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      checkToken();
+    }
+  });
 </script>
 
 </body>
