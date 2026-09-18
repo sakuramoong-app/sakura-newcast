@@ -177,6 +177,38 @@
     margin-bottom:10px;
   }
 
+  .room-group-header{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:12px 14px;
+    background:#fff;
+    border-radius:14px;
+    margin-bottom:8px;
+    cursor:pointer;
+    box-shadow:0 2px 8px rgba(217,160,180,.1);
+  }
+  .room-group-title{
+    flex:1;
+    font-size:14px;
+    font-weight:800;
+    color:var(--ink);
+  }
+  .room-group-count{
+    font-size:11px;
+    font-weight:800;
+    color:#c9556a;
+    background:var(--pink-soft);
+    padding:2px 10px;
+    border-radius:99px;
+  }
+  .room-group-caret{ font-size:13px; color:var(--sub); flex-shrink:0; }
+  .room-group-body{
+    display:none;
+    margin-bottom:14px;
+  }
+  .room-group-body.show{ display:block; }
+
   .room-item{
     background:#fff;
     border-radius:14px;
@@ -215,6 +247,63 @@
   .btn-copy{ background:var(--lav-soft); color:#6c5896; }
   .btn-close{ background:#FDEDF0; color:#c9556a; }
   .btn-delete{ background:#e8899b; color:#fff; }
+  .btn-edit{ background:var(--lav); color:#fff; }
+
+  .edit-room-form{
+    background:#FAF8F6;
+    border-radius:14px;
+    padding:14px 16px;
+    margin-top:8px;
+  }
+  .edit-room-form label{
+    display:block;
+    font-size:11px;
+    font-weight:700;
+    color:var(--sub);
+    margin:10px 0 4px;
+  }
+  .edit-room-form label:first-of-type{ margin-top:0; }
+  .edit-room-form input[type=text], .edit-room-form input[type=number]{
+    width:100%;
+    padding:9px 12px;
+    border:1.5px solid #eee;
+    border-radius:10px;
+    font-size:13px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+  }
+  .edit-room-form input:focus{ outline:none; border-color:var(--pink); }
+  .edit-room-row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .edit-room-row2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .edit-room-store-group{
+    background:#fff;
+    border-radius:10px;
+    padding:10px 12px;
+    margin-top:6px;
+  }
+  .edit-room-store-item{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-size:12.5px;
+    color:var(--ink);
+    padding:4px 0;
+  }
+  .edit-room-store-item input[type=checkbox]{ width:15px; height:15px; accent-color:var(--pink); }
+  .edit-room-actions{ display:flex; gap:8px; margin-top:12px; }
+  .edit-room-actions button{
+    flex:1;
+    border:none;
+    padding:10px;
+    border-radius:99px;
+    font-family:inherit;
+    font-size:12.5px;
+    font-weight:800;
+    cursor:pointer;
+  }
+  .btn-save-edit{ background:var(--pink); color:#fff; }
+  .btn-cancel-edit{ background:#eee; color:var(--sub); }
   .btn-toggle-checklist{ background:var(--mint-soft); color:#2c5b45; }
 
   .room-progress-track{
@@ -667,8 +756,9 @@
   function createRoom(){
     var name = document.getElementById('newName').value.trim();
     if(!name){
-      alert('キャスト名を入力してください');
-      return;
+      var now = new Date();
+      var stamp = (now.getMonth()+1) + '/' + now.getDate() + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+      name = '新人キャスト（' + stamp + '作成）';
     }
 
     var stores = getSelectedStores();
@@ -812,8 +902,64 @@
     var metaKeys = Object.keys(globalChecklistMeta);
     var talkKeys = Object.keys(globalTalkChecklistMeta);
 
-    var html = '';
+    var activeRooms = [];
+    var closedRooms = [];
     rooms.forEach(function(room, idx){
+      if(room.status === 'active'){
+        activeRooms.push(idx);
+      } else {
+        closedRooms.push(idx);
+      }
+    });
+
+    var html = '';
+
+    html += '<div class="room-group-header" onclick="toggleRoomGroup(\'active\')">';
+    html += '<span class="room-group-title">🟢 稼働中</span>';
+    html += '<span class="room-group-count">' + activeRooms.length + '件</span>';
+    html += '<span class="room-group-caret" id="groupCaretActive">▴</span>';
+    html += '</div>';
+    html += '<div class="room-group-body show" id="groupBodyActive">';
+    if(activeRooms.length === 0){
+      html += '<div class="empty">稼働中のルームはありません</div>';
+    } else {
+      activeRooms.forEach(function(idx){
+        html += renderRoomCard(rooms[idx], idx, baseUrl, metaKeys, talkKeys);
+      });
+    }
+    html += '</div>';
+
+    html += '<div class="room-group-header" onclick="toggleRoomGroup(\'closed\')">';
+    html += '<span class="room-group-title">⚪ 終了済み</span>';
+    html += '<span class="room-group-count">' + closedRooms.length + '件</span>';
+    html += '<span class="room-group-caret" id="groupCaretClosed">▾</span>';
+    html += '</div>';
+    html += '<div class="room-group-body" id="groupBodyClosed">';
+    if(closedRooms.length === 0){
+      html += '<div class="empty">終了済みのルームはありません</div>';
+    } else {
+      closedRooms.forEach(function(idx){
+        html += renderRoomCard(rooms[idx], idx, baseUrl, metaKeys, talkKeys);
+      });
+    }
+    html += '</div>';
+
+    document.getElementById('roomList').innerHTML = html;
+  }
+
+  function toggleRoomGroup(group){
+    var body = document.getElementById('groupBody' + (group === 'active' ? 'Active' : 'Closed'));
+    var caret = document.getElementById('groupCaret' + (group === 'active' ? 'Active' : 'Closed'));
+    if(body.classList.contains('show')){
+      body.classList.remove('show');
+      caret.textContent = '▾';
+    } else {
+      body.classList.add('show');
+      caret.textContent = '▴';
+    }
+  }
+
+  function renderRoomCard(room, idx, baseUrl, metaKeys, talkKeys){
       var isClosed = room.status !== 'active';
       var url = baseUrl + '?id=' + room.roomId;
       var checklist = room.checklist || {};
@@ -829,6 +975,7 @@
       var castDoneCount = castKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
       var staffOnlyDoneCount = staffOnlyKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
 
+      var html = '';
       html += '<div class="room-item' + (isClosed ? ' closed' : '') + '" id="roomItem' + idx + '">';
       html += '<div class="room-header" onclick="toggleRoomAccordion(' + idx + ')">';
       html += '<div class="room-header-main">';
@@ -845,11 +992,14 @@
       html += '<div class="room-actions">';
       html += '<button class="btn-copy" onclick="copyRoomUrl(\'' + url + '\', this)">URLをコピー</button>';
       if(!isClosed){
+        html += '<button class="btn-edit" onclick="openEditRoom(' + idx + ')">✏️ 編集する</button>';
         html += '<button class="btn-close" onclick="closeRoom(\'' + room.roomId + '\')">終了する</button>';
       } else {
         html += '<button class="btn-delete" onclick="deleteRoom(\'' + room.roomId + '\')">削除する</button>';
       }
       html += '</div>';
+
+      html += '<div class="edit-room-form" id="editForm' + idx + '" style="display:none;"></div>';
 
       html += '<div id="roomCaptureArea' + idx + '">';
 
@@ -941,9 +1091,8 @@
       html += '</div>'; // room-body
 
       html += '</div>'; // room-item
-    });
 
-    document.getElementById('roomList').innerHTML = html;
+      return html;
   }
 
   function renderAccordion(accId, title, doneCount, totalCount, innerHtml){
@@ -1180,7 +1329,21 @@
         document.querySelectorAll('.room-body.show').forEach(function(el){
           openRoomIdxs.push(el.id.replace('roomBody', ''));
         });
+        var closedGroupClosed = document.getElementById('groupBodyClosed') && !document.getElementById('groupBodyClosed').classList.contains('show');
+        var activeGroupClosed = document.getElementById('groupBodyActive') && !document.getElementById('groupBodyActive').classList.contains('show');
         renderRoomList(data.rooms);
+        if(closedGroupClosed){
+          var cb = document.getElementById('groupBodyClosed');
+          var cc = document.getElementById('groupCaretClosed');
+          if(cb){ cb.classList.remove('show'); }
+          if(cc){ cc.textContent = '▾'; }
+        }
+        if(activeGroupClosed){
+          var ab = document.getElementById('groupBodyActive');
+          var ac = document.getElementById('groupCaretActive');
+          if(ab){ ab.classList.remove('show'); }
+          if(ac){ ac.textContent = '▾'; }
+        }
         openIds.forEach(function(accId){
           var body = document.getElementById('acc' + accId);
           var caret = document.getElementById('caret' + accId);
@@ -1263,6 +1426,148 @@
       .then(function(data){
         if(data.error){
           alert('削除に失敗しました：' + data.error);
+          return;
+        }
+        loadRooms();
+      })
+      .catch(function(){
+        alert('通信エラーが発生しました');
+      });
+  }
+
+  function openEditRoom(idx){
+    var room = lastRoomsData[idx];
+    if(!room) return;
+
+    var formEl = document.getElementById('editForm' + idx);
+    if(!formEl) return;
+
+    // 既に開いていたら閉じる（トグル）
+    if(formEl.style.display !== 'none'){
+      formEl.style.display = 'none';
+      formEl.innerHTML = '';
+      return;
+    }
+
+    var stores = room.stores || {};
+    var backCutie = room.backCutie || {};
+    var backGokumon = room.backGokumon || {};
+
+    var html = '';
+    html += '<label>キャスト名</label>';
+    html += '<input type="text" id="editName' + idx + '" value="' + escapeHtml(room.castName || '') + '">';
+
+    html += '<label>バック金額（円）</label>';
+    html += '<div class="edit-room-row3">';
+    html += '<input type="number" id="editB60_' + idx + '" placeholder="60分" value="' + escapeHtml(room.back60 || '') + '">';
+    html += '<input type="number" id="editB90_' + idx + '" placeholder="90分" value="' + escapeHtml(room.back90 || '') + '">';
+    html += '<input type="number" id="editB120_' + idx + '" placeholder="120分" value="' + escapeHtml(room.back120 || '') + '">';
+    html += '</div>';
+
+    html += '<label>本指名バック（円）</label>';
+    html += '<div class="edit-room-row2">';
+    html += '<input type="number" id="editBh60_' + idx + '" placeholder="60分" value="' + escapeHtml(room.backHonshimei60 || '') + '">';
+    html += '<input type="number" id="editBh90_' + idx + '" placeholder="90分" value="' + escapeHtml(room.backHonshimei90 || '') + '">';
+    html += '</div>';
+
+    html += '<label>在籍店舗</label>';
+    html += '<div class="edit-room-store-group" id="editStoreGroup' + idx + '">';
+    STORE_LIST_LOCAL.forEach(function(s){
+      var checked = stores[s.key] ? 'checked' : '';
+      html += '<label class="edit-room-store-item"><input type="checkbox" id="editStore_' + s.key + '_' + idx + '" ' + checked + ' onchange="onEditStoreCheckChange(' + idx + ')"><span>' + s.label + '</span></label>';
+    });
+    html += '</div>';
+
+    html += '<div id="editCutieFields' + idx + '" class="edit-room-store-group" style="display:' + (stores.cutie ? 'block' : 'none') + ';">';
+    html += '<label style="margin-top:0;">キューティキューティ バック（円）</label>';
+    html += '<div class="edit-room-row3">';
+    html += '<input type="number" id="editCutie60_' + idx + '" placeholder="60分" value="' + escapeHtml(backCutie.back60 || '') + '">';
+    html += '<input type="number" id="editCutie90_' + idx + '" placeholder="90分" value="' + escapeHtml(backCutie.back90 || '') + '">';
+    html += '<input type="number" id="editCutie120_' + idx + '" placeholder="120分" value="' + escapeHtml(backCutie.back120 || '') + '">';
+    html += '</div>';
+    html += '<label>本指名バック（円）</label>';
+    html += '<div class="edit-room-row2">';
+    html += '<input type="number" id="editCutieHonshimei60_' + idx + '" placeholder="60分" value="' + escapeHtml(backCutie.backHonshimei60 || '') + '">';
+    html += '<input type="number" id="editCutieHonshimei90_' + idx + '" placeholder="90分" value="' + escapeHtml(backCutie.backHonshimei90 || '') + '">';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div id="editGokumonFields' + idx + '" class="edit-room-store-group" style="display:' + (stores.gokumon ? 'block' : 'none') + ';">';
+    html += '<label style="margin-top:0;">極門 バック（円）</label>';
+    html += '<div class="edit-room-row3">';
+    html += '<input type="number" id="editGokumon60_' + idx + '" placeholder="60分" value="' + escapeHtml(backGokumon.back60 || '') + '">';
+    html += '<input type="number" id="editGokumon90_' + idx + '" placeholder="90分" value="' + escapeHtml(backGokumon.back90 || '') + '">';
+    html += '<input type="number" id="editGokumon120_' + idx + '" placeholder="120分" value="' + escapeHtml(backGokumon.back120 || '') + '">';
+    html += '</div>';
+    html += '<label>本指名バック（円）</label>';
+    html += '<div class="edit-room-row2">';
+    html += '<input type="number" id="editGokumonHonshimei60_' + idx + '" placeholder="60分" value="' + escapeHtml(backGokumon.backHonshimei60 || '') + '">';
+    html += '<input type="number" id="editGokumonHonshimei90_' + idx + '" placeholder="90分" value="' + escapeHtml(backGokumon.backHonshimei90 || '') + '">';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="edit-room-actions">';
+    html += '<button class="btn-save-edit" onclick="saveEditRoom(' + idx + ')">保存する</button>';
+    html += '<button class="btn-cancel-edit" onclick="openEditRoom(' + idx + ')">キャンセル</button>';
+    html += '</div>';
+
+    formEl.innerHTML = html;
+    formEl.style.display = 'block';
+  }
+
+  function onEditStoreCheckChange(idx){
+    var cutieChecked = document.getElementById('editStore_cutie_' + idx).checked;
+    var gokumonChecked = document.getElementById('editStore_gokumon_' + idx).checked;
+    document.getElementById('editCutieFields' + idx).style.display = cutieChecked ? 'block' : 'none';
+    document.getElementById('editGokumonFields' + idx).style.display = gokumonChecked ? 'block' : 'none';
+  }
+
+  function saveEditRoom(idx){
+    var room = lastRoomsData[idx];
+    if(!room) return;
+
+    var stores = {};
+    STORE_LIST_LOCAL.forEach(function(s){
+      var el = document.getElementById('editStore_' + s.key + '_' + idx);
+      stores[s.key] = el ? el.checked : false;
+    });
+
+    var body = {
+      action: 'editRoom',
+      token: savedToken,
+      id: room.roomId,
+      castName: document.getElementById('editName' + idx).value.trim(),
+      back60: document.getElementById('editB60_' + idx).value.trim(),
+      back90: document.getElementById('editB90_' + idx).value.trim(),
+      back120: document.getElementById('editB120_' + idx).value.trim(),
+      backHonshimei60: document.getElementById('editBh60_' + idx).value.trim(),
+      backHonshimei90: document.getElementById('editBh90_' + idx).value.trim(),
+      stores: stores
+    };
+
+    if(stores.cutie){
+      body.backCutie60 = document.getElementById('editCutie60_' + idx).value.trim();
+      body.backCutie90 = document.getElementById('editCutie90_' + idx).value.trim();
+      body.backCutie120 = document.getElementById('editCutie120_' + idx).value.trim();
+      body.backCutieHonshimei60 = document.getElementById('editCutieHonshimei60_' + idx).value.trim();
+      body.backCutieHonshimei90 = document.getElementById('editCutieHonshimei90_' + idx).value.trim();
+    }
+    if(stores.gokumon){
+      body.backGokumon60 = document.getElementById('editGokumon60_' + idx).value.trim();
+      body.backGokumon90 = document.getElementById('editGokumon90_' + idx).value.trim();
+      body.backGokumon120 = document.getElementById('editGokumon120_' + idx).value.trim();
+      body.backGokumonHonshimei60 = document.getElementById('editGokumonHonshimei60_' + idx).value.trim();
+      body.backGokumonHonshimei90 = document.getElementById('editGokumonHonshimei90_' + idx).value.trim();
+    }
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          alert('保存に失敗しました：' + result.error);
           return;
         }
         loadRooms();
