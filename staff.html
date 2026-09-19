@@ -540,6 +540,51 @@
     text-decoration:none;
     margin-top:10px;
   }
+
+  .room-notice-box{
+    background:var(--peach-soft, #FDF0E4);
+    border-radius:14px;
+    padding:13px 15px;
+    margin-top:10px;
+  }
+  .room-notice-title{
+    font-size:12.5px;
+    font-weight:800;
+    color:var(--ink);
+    margin-bottom:4px;
+  }
+  .room-notice-desc{
+    font-size:11px;
+    color:var(--sub);
+    margin:0 0 8px;
+  }
+  .room-notice-textarea{
+    width:100%;
+    min-height:70px;
+    padding:10px 12px;
+    border:1.5px solid #eee;
+    border-radius:11px;
+    font-size:13px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+    resize:vertical;
+  }
+  .room-notice-textarea:focus{ outline:none; border-color:var(--pink); }
+  .room-notice-save-btn{
+    display:block;
+    width:100%;
+    border:none;
+    background:var(--pink);
+    color:#fff;
+    font-family:inherit;
+    font-weight:800;
+    font-size:12.5px;
+    padding:9px;
+    border-radius:99px;
+    cursor:pointer;
+    margin-top:8px;
+  }
   .room-costume-label{ font-size:11px; font-weight:800; color:#6c5896; margin:10px 0 6px; }
   .room-costume-grid{ display:flex; gap:8px; }
   .room-costume-thumb{
@@ -1175,6 +1220,16 @@
       }
       html += '</div>';
 
+      // 内勤からキャストへのお知らせ
+      var noticeText = room.notice || '';
+      html += '<div class="room-notice-box">';
+      html += '<div class="room-notice-title">📢 キャストへのお知らせ</div>';
+      html += '<p class="room-notice-desc">ここに入力すると、キャストの画面に表示されます。</p>';
+      html += '<textarea class="room-notice-textarea" id="noticeInput' + idx + '" placeholder="例：撮影の日程が決まりました！詳しくはコメントを確認してください">' + escapeHtml(noticeText) + '</textarea>';
+      html += '<button class="room-notice-save-btn" onclick="saveNotice(\'' + room.roomId + '\',' + idx + ')">お知らせを保存</button>';
+      html += '<div class="save-note" id="noticeSaveNote' + idx + '"></div>';
+      html += '</div>';
+
       // アコーディオン1：口頭説明チェックリスト
       html += renderAccordion('talk' + idx, '📋 口頭説明チェックリスト', talkDoneCount, talkKeys.length, (function(){
         var inner = '';
@@ -1760,6 +1815,36 @@
       .catch(function(){
         hideLoading();
         alert('通信エラーが発生しました');
+      });
+  }
+
+  function saveNotice(roomId, idx){
+    var textarea = document.getElementById('noticeInput' + idx);
+    var note = document.getElementById('noticeSaveNote' + idx);
+    var notice = textarea.value;
+
+    note.textContent = '保存中...';
+    note.style.color = '#9C8B8F';
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setNotice', token: savedToken, id: roomId, notice: notice })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          note.textContent = '保存に失敗しました';
+          note.style.color = '#c9556a';
+          return;
+        }
+        var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
+        if(room) room.notice = notice;
+        note.textContent = '保存しました';
+        note.style.color = '#7FC8AA';
+      })
+      .catch(function(){
+        note.textContent = '通信エラーが発生しました';
+        note.style.color = '#c9556a';
       });
   }
 

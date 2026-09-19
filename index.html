@@ -664,6 +664,26 @@
   @keyframes spin{
     to{ transform:rotate(360deg); }
   }
+
+  .notice-banner{
+    background:linear-gradient(135deg, #FDF0E4, #FDEDF0);
+    border:1.5px solid #F0C6A0;
+    border-radius:16px;
+    padding:14px 16px;
+    margin-bottom:16px;
+  }
+  .notice-banner-title{
+    font-size:13px;
+    font-weight:800;
+    color:#b5661f;
+    margin-bottom:6px;
+  }
+  .notice-banner-body{
+    font-size:13.5px;
+    color:var(--ink);
+    line-height:1.7;
+    white-space:pre-wrap;
+  }
 </style>
 </head>
 <body>
@@ -842,6 +862,14 @@
 
   function renderTabProgress(data){
     var html = '';
+
+    // 内勤からのお知らせ（設定されている場合のみ表示）
+    if(data.notice && data.notice.trim()){
+      html += '<div class="notice-banner">';
+      html += '<div class="notice-banner-title">📢 お知らせ</div>';
+      html += '<div class="notice-banner-body">' + escapeHtml(data.notice).replace(/\n/g, '<br>') + '</div>';
+      html += '</div>';
+    }
 
     // 進捗バー
     var items = Object.keys(data.checklistMeta);
