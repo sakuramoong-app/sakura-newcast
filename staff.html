@@ -110,6 +110,26 @@
   input:focus{ outline:none; border-color:var(--pink); background:#fff; }
   .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
 
+  .rank-select-row{ display:flex; gap:7px; }
+  .rank-btn{
+    flex:1;
+    border:1.5px solid #eee;
+    background:#fff;
+    color:var(--ink);
+    font-family:inherit;
+    font-weight:800;
+    font-size:14px;
+    padding:11px 0;
+    border-radius:11px;
+    cursor:pointer;
+  }
+  .rank-btn.selected{ border-color:var(--pink); background:var(--pink-soft); color:#c9556a; }
+  .rank-select-note{
+    font-size:11px;
+    color:var(--sub);
+    margin:6px 0 4px;
+  }
+
   .store-checkbox-group{
     background:#FAF8F6;
     border-radius:11px;
@@ -508,6 +528,18 @@
     padding:3px 0;
   }
   .room-choice-val{ color:#6c5896; font-weight:700; }
+  .profile-link-btn{
+    display:block;
+    text-align:center;
+    background:var(--mint);
+    color:#fff;
+    font-weight:800;
+    font-size:12.5px;
+    padding:10px;
+    border-radius:11px;
+    text-decoration:none;
+    margin-top:10px;
+  }
   .room-costume-label{ font-size:11px; font-weight:800; color:#6c5896; margin:10px 0 6px; }
   .room-costume-grid{ display:flex; gap:8px; }
   .room-costume-thumb{
@@ -530,6 +562,18 @@
   .room-comment-meta{ font-size:10px; color:var(--sub); margin-bottom:2px; }
   .room-comment-text{ font-size:12.5px; color:var(--ink); white-space:pre-wrap; }
   .room-comment-empty{ font-size:11.5px; color:var(--sub); padding:6px 0; }
+  .room-comment-author{
+    width:100%;
+    padding:8px 11px;
+    border:1.5px solid #eee;
+    border-radius:99px;
+    font-size:12px;
+    font-family:inherit;
+    background:#FAF8F6;
+    color:var(--ink);
+    margin-top:8px;
+  }
+  .room-comment-author:focus{ outline:none; border-color:var(--pink); background:#fff; }
   .room-comment-input-row{ display:flex; gap:6px; margin-top:8px; }
   .room-comment-input{
     flex:1;
@@ -571,9 +615,35 @@
     text-align:center;
     padding:60px 20px;
   }
+
+  .loading-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(92,75,79,.55);
+    z-index:999;
+    align-items:center;
+    justify-content:center;
+  }
+  .loading-overlay.show{ display:flex; }
+  .loading-spinner{
+    width:48px;
+    height:48px;
+    border:5px solid rgba(255,255,255,.35);
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{
+    to{ transform:rotate(360deg); }
+  }
 </style>
 </head>
 <body>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-spinner"></div>
+</div>
 
 <div id="tokenGate" class="token-gate">
   <span class="kicker">サクラムーングループ・内勤用</span>
@@ -594,7 +664,17 @@
     <div class="card-title">新しいルームを作成</div>
 
     <label>キャスト名</label>
-    <input type="text" id="newName" placeholder="例：ひまり">
+    <input type="text" id="newName" placeholder="未入力の場合は仮の名前で作成されます">
+
+    <label>ランクを選択（自動でバックを入力します）</label>
+    <div class="rank-select-row" id="rankSelectRow">
+      <button type="button" class="rank-btn" onclick="applyRankPreset('SS', this)">SS</button>
+      <button type="button" class="rank-btn" onclick="applyRankPreset('S', this)">S</button>
+      <button type="button" class="rank-btn" onclick="applyRankPreset('A', this)">A</button>
+      <button type="button" class="rank-btn" onclick="applyRankPreset('B', this)">B</button>
+      <button type="button" class="rank-btn" onclick="applyRankPreset('C', this)">C</button>
+    </div>
+    <div class="rank-select-note">ランクを選ぶと下の金額欄に自動入力されます。入力後の数字は手動で調整できます。</div>
 
     <label>バック金額（円）</label>
     <div class="row3">
@@ -663,6 +743,15 @@
   var savedToken = null;
   var lastCreatedUrl = '';
 
+  function showLoading(){
+    var el = document.getElementById('loadingOverlay');
+    if(el) el.classList.add('show');
+  }
+  function hideLoading(){
+    var el = document.getElementById('loadingOverlay');
+    if(el) el.classList.remove('show');
+  }
+
   var STORE_LIST_LOCAL = [
     { key: 'sakuramoon',  label: 'サクラムーン',         group: 'basic', defaultChecked: true },
     { key: 'lanauguisu',  label: 'ラナ鶯谷',             group: 'basic', defaultChecked: true },
@@ -673,6 +762,48 @@
     { key: 'gyakuanal',   label: '逆アナル倶楽部',       group: 'other', defaultChecked: false },
     { key: 'gokumon',     label: '極門',                 group: 'other', defaultChecked: false }
   ];
+
+  // 内勤コメントの投稿者選択肢
+  var COMMENT_AUTHORS_LOCAL = ['きゃ', 'すや', 'らん', 'わか', 'かみ'];
+
+  // サクラ・ラナ系のランク別バックプリセット（60分・90分・120分）
+  var RANK_PRESETS_LOCAL = {
+    SS: { back60: 10000, back90: 15000, back120: 19000 },
+    S:  { back60: 9000,  back90: 12000, back120: 16000 },
+    A:  { back60: 8000,  back90: 11000, back120: 14000 },
+    B:  { back60: 7000,  back90: 10000, back120: 13000 },
+    C:  { back60: 6000,  back90: 9000,  back120: 12000 }
+  };
+
+  // 本指名バックの自動計算：A・S・SSは60分+500円／90分以上+1000円、B・Cは一律+1000円
+  function calcHonshimei(rank, back60, back90){
+    var isHighRank = (rank === 'A' || rank === 'S' || rank === 'SS');
+    var add60 = isHighRank ? 500 : 1000;
+    var add90 = 1000; // 90分以上はどのランクも+1000円
+    return {
+      honshimei60: back60 + add60,
+      honshimei90: back90 + add90
+    };
+  }
+
+  function applyRankPreset(rank, btnEl){
+    var preset = RANK_PRESETS_LOCAL[rank];
+    if(!preset) return;
+
+    document.getElementById('newB60').value = preset.back60;
+    document.getElementById('newB90').value = preset.back90;
+    document.getElementById('newB120').value = preset.back120;
+
+    var honshimei = calcHonshimei(rank, preset.back60, preset.back90);
+    document.getElementById('newBh60').value = honshimei.honshimei60;
+    document.getElementById('newBh90').value = honshimei.honshimei90;
+
+    // 選択中のランクボタンを見た目で分かるようにする
+    document.querySelectorAll('#rankSelectRow .rank-btn').forEach(function(b){
+      b.classList.remove('selected');
+    });
+    if(btnEl) btnEl.classList.add('selected');
+  }
 
   function renderStoreCheckboxes(){
     var html = '';
@@ -725,6 +856,7 @@
       loginBtn.disabled = true;
       loginBtn.textContent = '確認中...';
     }
+    showLoading();
 
     fetch(GAS_URL + '?action=checkToken&token=' + encodeURIComponent(token))
       .then(function(res){ return res.json(); })
@@ -734,6 +866,7 @@
           loginBtn.textContent = '開く';
         }
         if(!result.valid){
+          hideLoading();
           alert('合言葉が違います');
           return;
         }
@@ -745,6 +878,7 @@
         loadRooms();
       })
       .catch(function(){
+        hideLoading();
         if(loginBtn){
           loginBtn.disabled = false;
           loginBtn.textContent = '開く';
@@ -793,6 +927,7 @@
     var btn = document.getElementById('createBtn');
     btn.disabled = true;
     btn.textContent = '作成中...';
+    showLoading();
 
     fetch(GAS_URL, {
       method: 'POST',
@@ -803,6 +938,7 @@
         btn.disabled = false;
         btn.textContent = 'ルームを作成';
         if(data.error){
+          hideLoading();
           alert('作成に失敗しました：' + data.error);
           return;
         }
@@ -834,6 +970,7 @@
         loadRooms();
       })
       .catch(function(){
+        hideLoading();
         btn.disabled = false;
         btn.textContent = 'ルームを作成';
         alert('通信エラーが発生しました');
@@ -874,9 +1011,11 @@
   var lastRoomsData = [];
 
   function loadRooms(){
+    showLoading();
     fetch(GAS_URL + '?action=listRooms&token=' + encodeURIComponent(savedToken))
       .then(function(res){ return res.json(); })
       .then(function(data){
+        hideLoading();
         if(data.error){
           document.getElementById('roomList').innerHTML = '<div class="empty">読み込みに失敗しました：' + data.error + '</div>';
           return;
@@ -888,6 +1027,7 @@
         renderRoomList(data.rooms);
       })
       .catch(function(){
+        hideLoading();
         document.getElementById('roomList').innerHTML = '<div class="empty">通信エラーが発生しました</div>';
       });
   }
@@ -1020,6 +1160,8 @@
       html += '<div class="room-choice-row"><span>在籍店舗</span><span class="room-choice-val">' + (storeNames.length ? escapeHtml(storeNames.join('、')) : '未設定') + '</span></div>';
       html += '<div class="room-choice-row"><span>メールアドレス</span><span class="room-choice-val">' + (room.email ? escapeHtml(room.email) : '未入力') + '</span></div>';
 
+      html += '<a class="profile-link-btn" href="https://sakuramoong-app.github.io/cast-sakura-profile/staff.html" target="_blank">📋 在籍プロフィール管理ページを開く</a>';
+
       var hasCostume = costumeUrls.some(function(u){ return !!u; });
       if(hasCostume){
         html += '<div class="room-costume-label">衣装の写真</div>';
@@ -1081,6 +1223,11 @@
         });
       }
       html += '</div>';
+      html += '<select class="room-comment-author" id="commentAuthor' + idx + '">';
+      COMMENT_AUTHORS_LOCAL.forEach(function(name){
+        html += '<option value="' + name + '">' + name + '</option>';
+      });
+      html += '</select>';
       html += '<div class="room-comment-input-row">';
       html += '<input type="text" class="room-comment-input" id="commentInput' + idx + '" placeholder="コメントを入力">';
       html += '<button class="room-comment-send" onclick="sendComment(\'' + room.roomId + '\',' + idx + ')">送信</button>';
@@ -1362,15 +1509,18 @@
 
   function sendComment(roomId, idx){
     var input = document.getElementById('commentInput' + idx);
+    var authorSelect = document.getElementById('commentAuthor' + idx);
     var text = input.value.trim();
     if(!text) return;
+
+    var author = authorSelect ? authorSelect.value : '内勤';
 
     input.value = '';
     input.disabled = true;
 
     fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'addComment', id: roomId, text: text, author: '内勤', token: savedToken })
+      body: JSON.stringify({ action: 'addComment', id: roomId, text: text, author: author, token: savedToken })
     })
       .then(function(res){ return res.json(); })
       .then(function(result){
@@ -1397,6 +1547,7 @@
     if(!confirm('このルームを終了しますか？ 終了すると、キャストはこのページを開けなくなります。')){
       return;
     }
+    showLoading();
     fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'closeRoom', token: savedToken, id: roomId })
@@ -1404,12 +1555,14 @@
       .then(function(res){ return res.json(); })
       .then(function(data){
         if(data.error){
+          hideLoading();
           alert('終了に失敗しました：' + data.error);
           return;
         }
         loadRooms();
       })
       .catch(function(){
+        hideLoading();
         alert('通信エラーが発生しました');
       });
   }
@@ -1418,6 +1571,7 @@
     if(!confirm('このルームを完全に削除しますか？ この操作は取り消せません。')){
       return;
     }
+    showLoading();
     fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'deleteRoom', token: savedToken, id: roomId })
@@ -1425,12 +1579,14 @@
       .then(function(res){ return res.json(); })
       .then(function(data){
         if(data.error){
+          hideLoading();
           alert('削除に失敗しました：' + data.error);
           return;
         }
         loadRooms();
       })
       .catch(function(){
+        hideLoading();
         alert('通信エラーが発生しました');
       });
   }
@@ -1456,6 +1612,14 @@
     var html = '';
     html += '<label>キャスト名</label>';
     html += '<input type="text" id="editName' + idx + '" value="' + escapeHtml(room.castName || '') + '">';
+
+    html += '<label>ランクを選択（自動でバックを入力します）</label>';
+    html += '<div class="rank-select-row" id="editRankRow' + idx + '">';
+    ['SS','S','A','B','C'].forEach(function(r){
+      html += '<button type="button" class="rank-btn" onclick="applyEditRankPreset(' + idx + ',\'' + r + '\', this)">' + r + '</button>';
+    });
+    html += '</div>';
+    html += '<div class="rank-select-note">ランクを選ぶと下の金額欄に自動入力されます。入力後の数字は手動で調整できます。</div>';
 
     html += '<label>バック金額（円）</label>';
     html += '<div class="edit-room-row3">';
@@ -1522,6 +1686,25 @@
     document.getElementById('editGokumonFields' + idx).style.display = gokumonChecked ? 'block' : 'none';
   }
 
+  function applyEditRankPreset(idx, rank, btnEl){
+    var preset = RANK_PRESETS_LOCAL[rank];
+    if(!preset) return;
+
+    document.getElementById('editB60_' + idx).value = preset.back60;
+    document.getElementById('editB90_' + idx).value = preset.back90;
+    document.getElementById('editB120_' + idx).value = preset.back120;
+
+    var honshimei = calcHonshimei(rank, preset.back60, preset.back90);
+    document.getElementById('editBh60_' + idx).value = honshimei.honshimei60;
+    document.getElementById('editBh90_' + idx).value = honshimei.honshimei90;
+
+    var row = document.getElementById('editRankRow' + idx);
+    if(row){
+      row.querySelectorAll('.rank-btn').forEach(function(b){ b.classList.remove('selected'); });
+    }
+    if(btnEl) btnEl.classList.add('selected');
+  }
+
   function saveEditRoom(idx){
     var room = lastRoomsData[idx];
     if(!room) return;
@@ -1560,6 +1743,7 @@
       body.backGokumonHonshimei90 = document.getElementById('editGokumonHonshimei90_' + idx).value.trim();
     }
 
+    showLoading();
     fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(body)
@@ -1567,12 +1751,14 @@
       .then(function(res){ return res.json(); })
       .then(function(result){
         if(result.error){
+          hideLoading();
           alert('保存に失敗しました：' + result.error);
           return;
         }
         loadRooms();
       })
       .catch(function(){
+        hideLoading();
         alert('通信エラーが発生しました');
       });
   }

@@ -233,6 +233,21 @@
   .costume-fallback .txt{ font-size:10.5px; color:#2c5b45; font-weight:700; }
   .costume-slot .plus{ font-size:24px; color:var(--pink); }
   .costume-slot .txt{ font-size:10.5px; color:var(--sub); }
+  .costume-slot-add{ border-color:var(--mint); background:var(--mint-soft); }
+  .costume-slot-add .plus{ color:var(--mint); }
+  .costume-delete-btn{
+    position:absolute;
+    top:5px; right:5px;
+    width:22px; height:22px;
+    border-radius:50%;
+    background:rgba(92,75,79,.6);
+    color:#fff;
+    border:none;
+    font-size:14px;
+    line-height:1;
+    cursor:pointer;
+    z-index:2;
+  }
   .costume-slot input[type=file]{ display:none; }
   .costume-slot .uploading{
     position:absolute; inset:0;
@@ -627,9 +642,35 @@
     margin-top:5px;
     line-height:1.6;
   }
+
+  .loading-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(92,75,79,.55);
+    z-index:999;
+    align-items:center;
+    justify-content:center;
+  }
+  .loading-overlay.show{ display:flex; }
+  .loading-spinner{
+    width:48px;
+    height:48px;
+    border:5px solid rgba(255,255,255,.35);
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{
+    to{ transform:rotate(360deg); }
+  }
 </style>
 </head>
 <body>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-spinner"></div>
+</div>
 
 <div id="app">
   <div class="state-box">
@@ -653,6 +694,16 @@
   var roomId = null;
   var currentData = null;
   var currentTab = 'progress';
+  var COSTUME_MAX_SLOTS_LOCAL = 8;
+
+  function showLoading(){
+    var el = document.getElementById('loadingOverlay');
+    if(el) el.classList.add('show');
+  }
+  function hideLoading(){
+    var el = document.getElementById('loadingOverlay');
+    if(el) el.classList.remove('show');
+  }
 
   var GLOSSARY = {
     himedeco: {
@@ -825,24 +876,38 @@
     html += '</div>';
 
     // 衣装アップロード
-    var urls = data.costumeUrls || ['', '', ''];
+    var urls = (data.costumeUrls || []).filter(function(u){ return !!u; });
+    var uploadedCount = urls.length;
+    var showSlots = Math.max(3, uploadedCount); // 最低3枠は常に見せる
+    var canAddMore = uploadedCount < COSTUME_MAX_SLOTS_LOCAL;
+
     html += '<div class="section alt3">';
     html += '<div class="section-title">衣装の写真</div>';
-    html += '<p style="font-size:12.5px;color:var(--sub);">衣装の候補を3着まで送れます。タップして写真を選んでください。</p>';
+    html += '<p style="font-size:12.5px;color:var(--sub);">衣装の候補を送れます（最大' + COSTUME_MAX_SLOTS_LOCAL + '着まで）。タップして写真を選んでください。</p>';
     html += '<div class="costume-grid">';
-    for(var i=0;i<3;i++){
+    for(var i=0;i<showSlots;i++){
       var url = urls[i] || '';
       html += '<label class="costume-slot" id="costumeSlot' + i + '">';
       if(url){
         html += '<img src="' + url + '" alt="衣装' + (i+1) + '" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">';
         html += '<div class="costume-fallback" style="display:none;"><span class="txt">アップロード済み</span></div>';
+        html += '<button type="button" class="costume-delete-btn" onclick="event.preventDefault(); deleteCostumeSlot(' + i + ');">×</button>';
       } else {
         html += '<span class="plus">＋</span><span class="txt">' + (i+1) + '着目</span>';
       }
       html += '<input type="file" accept="image/*" onchange="handleCostumeUpload(' + i + ', this)">';
       html += '</label>';
     }
+    if(canAddMore && uploadedCount >= 3){
+      html += '<label class="costume-slot costume-slot-add" id="costumeSlotAdd">';
+      html += '<span class="plus">＋</span><span class="txt">追加する</span>';
+      html += '<input type="file" accept="image/*" onchange="handleCostumeUpload(' + uploadedCount + ', this)">';
+      html += '</label>';
+    }
     html += '</div>';
+    if(!canAddMore){
+      html += '<p style="font-size:11px;color:var(--sub);margin-top:6px;">上限（' + COSTUME_MAX_SLOTS_LOCAL + '着）まで送りました。</p>';
+    }
     html += '</div>';
 
     // 在籍プロフィール入力フォーム
@@ -1595,15 +1660,18 @@
     var file = input.files[0];
     if(!file) return;
 
-    var slotEl = document.getElementById('costumeSlot' + slot);
-    var loadingDiv = document.createElement('div');
-    loadingDiv.className = 'uploading';
-    loadingDiv.textContent = 'アップロード中...';
-    slotEl.appendChild(loadingDiv);
+    var slotEl = document.getElementById('costumeSlot' + slot) || document.getElementById('costumeSlotAdd');
+    if(slotEl){
+      var loadingDiv = document.createElement('div');
+      loadingDiv.className = 'uploading';
+      loadingDiv.textContent = 'アップロード中...';
+      slotEl.appendChild(loadingDiv);
+    }
 
     var reader = new FileReader();
     reader.onload = function(e){
       var base64 = e.target.result.split(',')[1];
+      showLoading();
       fetch(GAS_URL, {
         method: 'POST',
         body: JSON.stringify({
@@ -1616,6 +1684,7 @@
       })
         .then(function(res){ return res.json(); })
         .then(function(result){
+          hideLoading();
           if(result.error){
             alert('アップロードに失敗しました：' + result.error);
             loadRoom();
@@ -1626,11 +1695,35 @@
           renderRoom(currentData);
         })
         .catch(function(){
+          hideLoading();
           alert('通信エラーが発生しました');
           loadRoom();
         });
     };
     reader.readAsDataURL(file);
+  }
+
+  function deleteCostumeSlot(slot){
+    if(!confirm('この写真を削除しますか？')) return;
+    showLoading();
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteCostume', id: roomId, slot: slot })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        hideLoading();
+        if(result.error){
+          alert('削除に失敗しました：' + result.error);
+          return;
+        }
+        currentData.costumeUrls = result.costumeUrls;
+        renderRoom(currentData);
+      })
+      .catch(function(){
+        hideLoading();
+        alert('通信エラーが発生しました');
+      });
   }
 
   function setWig(type){
@@ -1644,12 +1737,14 @@
   }
 
   function saveWigChoice(type, hairMake){
+    showLoading();
     fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'setWigChoice', id: roomId, type: type, hairMake: hairMake })
     })
       .then(function(res){ return res.json(); })
       .then(function(result){
+        hideLoading();
         if(result.error){
           alert('保存に失敗しました');
           return;
@@ -1657,7 +1752,7 @@
         currentData.wigChoice = result.wigChoice;
         renderRoom(currentData);
       })
-      .catch(function(){ alert('通信エラーが発生しました'); });
+      .catch(function(){ hideLoading(); alert('通信エラーが発生しました'); });
   }
 
   function saveEmail(){
