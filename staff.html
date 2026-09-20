@@ -750,6 +750,21 @@
   @keyframes spin{
     to{ transform:rotate(360deg); }
   }
+
+  /* PCなど画面幅が広い場合は、全体を読みやすいサイズに拡大表示する。
+     スマホ幅（768px未満）にはこの拡大は適用されず、従来通りの見た目になる。 */
+  @media (min-width: 768px){
+    body{
+      max-width:820px;
+      zoom:1.35;
+    }
+  }
+  @media (min-width: 1100px){
+    body{
+      max-width:900px;
+      zoom:1.5;
+    }
+  }
 </style>
 </head>
 <body>
