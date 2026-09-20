@@ -1464,7 +1464,7 @@
         html += '<option value="' + name + '">' + name + '</option>';
       });
       html += '</select>';
-      html += '<textarea class="room-comment-input" id="commentInput' + idx + '" placeholder="コメントを入力（改行できます）"></textarea>';
+      html += '<textarea class="room-comment-input" id="commentInput' + idx + '" placeholder="コメントを入力（改行できます・スクショの貼り付けもできます）" onpaste="handleCommentPaste(' + idx + ', event)"></textarea>';
       html += '<div class="room-comment-photo-preview" id="commentPhotoPreview' + idx + '" style="display:none;"></div>';
       html += '<div class="room-comment-input-row">';
       html += '<label class="room-comment-photo-btn">';
@@ -1749,8 +1749,7 @@
 
   var pendingCommentPhoto = {}; // idx -> { base64, mimeType }
 
-  function handleCommentPhotoSelect(idx, input){
-    var file = input.files[0];
+  function processCommentPhotoFile(idx, file){
     if(!file) return;
 
     var preview = document.getElementById('commentPhotoPreview' + idx);
@@ -1764,6 +1763,26 @@
       preview.innerHTML = '<img src="' + e.target.result + '" class="room-comment-photo-thumb"><button type="button" class="room-comment-photo-remove" onclick="removeCommentPhoto(' + idx + ')">×</button>';
     };
     reader.readAsDataURL(file);
+  }
+
+  function handleCommentPhotoSelect(idx, input){
+    var file = input.files[0];
+    processCommentPhotoFile(idx, file);
+  }
+
+  function handleCommentPaste(idx, event){
+    var items = (event.clipboardData || window.clipboardData).items;
+    if(!items) return;
+
+    for(var i = 0; i < items.length; i++){
+      if(items[i].type.indexOf('image') === 0){
+        event.preventDefault();
+        var file = items[i].getAsFile();
+        processCommentPhotoFile(idx, file);
+        return;
+      }
+    }
+    // 画像でなければ何もしない（通常のテキスト貼り付けはそのまま動く）
   }
 
   function removeCommentPhoto(idx){
