@@ -687,15 +687,20 @@
     margin-top:8px;
   }
   .room-comment-author:focus{ outline:none; border-color:var(--pink); background:#fff; }
-  .room-comment-input-row{ display:flex; gap:6px; margin-top:8px; }
+  .room-comment-input-row{ display:flex; gap:6px; margin-top:8px; align-items:center; }
   .room-comment-input{
-    flex:1;
-    padding:8px 11px;
+    width:100%;
+    min-height:56px;
+    padding:9px 12px;
     border:1.5px solid #eee;
-    border-radius:99px;
+    border-radius:12px;
     font-size:12.5px;
     font-family:inherit;
     background:#FAF8F6;
+    color:var(--ink);
+    resize:vertical;
+    margin-top:8px;
+    box-sizing:border-box;
   }
   .room-comment-input:focus{ outline:none; border-color:var(--pink); background:#fff; }
   .room-comment-send{
@@ -709,6 +714,50 @@
     border-radius:99px;
     cursor:pointer;
     flex-shrink:0;
+  }
+  .room-comment-photo-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:38px;
+    height:38px;
+    border:1.5px solid #eee;
+    border-radius:50%;
+    background:#FAF8F6;
+    font-size:16px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .room-comment-photo-preview{
+    margin-top:8px;
+    position:relative;
+    display:inline-block;
+  }
+  .room-comment-photo-thumb{
+    width:70px; height:88px;
+    object-fit:cover;
+    border-radius:8px;
+    border:1px solid #ddd;
+  }
+  .room-comment-photo-remove{
+    position:absolute;
+    top:-6px; right:-6px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:rgba(92,75,79,.7);
+    color:#fff;
+    border:none;
+    font-size:12px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .room-comment-photo{
+    display:block;
+    max-width:160px;
+    max-height:200px;
+    border-radius:8px;
+    margin-top:6px;
+    border:1px solid #eee;
   }
 
   .badge{
@@ -1390,7 +1439,12 @@
           var origIdx = item.originalIndex;
           html += '<div class="room-comment" id="commentView_' + idx + '_' + origIdx + '">';
           html += '<div class="room-comment-meta">' + escapeHtml(c.author || '内勤') + '　' + formatDate(c.at) + (c.editedAt ? '　（編集済み）' : '') + '</div>';
-          html += '<div class="room-comment-text">' + escapeHtml(c.text) + '</div>';
+          if(c.text){
+            html += '<div class="room-comment-text">' + escapeHtml(c.text) + '</div>';
+          }
+          if(c.photoUrl){
+            html += '<a href="' + c.photoUrl + '" target="_blank"><img src="' + c.photoUrl + '" class="room-comment-photo" alt="添付写真" onerror="this.style.display=\'none\';"></a>';
+          }
           if(!isClosed){
             html += '<button class="room-comment-edit-btn" onclick="startEditComment(' + idx + ',' + origIdx + ')">編集</button>';
           }
@@ -1410,8 +1464,12 @@
         html += '<option value="' + name + '">' + name + '</option>';
       });
       html += '</select>';
+      html += '<textarea class="room-comment-input" id="commentInput' + idx + '" placeholder="コメントを入力（改行できます）"></textarea>';
+      html += '<div class="room-comment-photo-preview" id="commentPhotoPreview' + idx + '" style="display:none;"></div>';
       html += '<div class="room-comment-input-row">';
-      html += '<input type="text" class="room-comment-input" id="commentInput' + idx + '" placeholder="コメントを入力">';
+      html += '<label class="room-comment-photo-btn">';
+      html += '📷<input type="file" accept="image/*" style="display:none;" onchange="handleCommentPhotoSelect(' + idx + ', this)">';
+      html += '</label>';
       html += '<button class="room-comment-send" onclick="sendComment(\'' + room.roomId + '\',' + idx + ')">送信</button>';
       html += '</div>';
 
@@ -1689,33 +1747,74 @@
       .catch(function(){});
   }
 
+  var pendingCommentPhoto = {}; // idx -> { base64, mimeType }
+
+  function handleCommentPhotoSelect(idx, input){
+    var file = input.files[0];
+    if(!file) return;
+
+    var preview = document.getElementById('commentPhotoPreview' + idx);
+    preview.style.display = 'block';
+    preview.innerHTML = '読み込み中...';
+
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var base64 = e.target.result.split(',')[1];
+      pendingCommentPhoto[idx] = { base64: base64, mimeType: file.type };
+      preview.innerHTML = '<img src="' + e.target.result + '" class="room-comment-photo-thumb"><button type="button" class="room-comment-photo-remove" onclick="removeCommentPhoto(' + idx + ')">×</button>';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeCommentPhoto(idx){
+    delete pendingCommentPhoto[idx];
+    var preview = document.getElementById('commentPhotoPreview' + idx);
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+  }
+
   function sendComment(roomId, idx){
     var input = document.getElementById('commentInput' + idx);
     var authorSelect = document.getElementById('commentAuthor' + idx);
     var text = input.value.trim();
-    if(!text) return;
+    var photo = pendingCommentPhoto[idx];
+
+    if(!text && !photo){
+      alert('コメントを入力するか、写真を選択してください');
+      return;
+    }
 
     var author = authorSelect ? authorSelect.value : '内勤';
 
+    var body = { action: 'addComment', id: roomId, text: text, author: author, token: savedToken };
+    if(photo){
+      body.photoBase64 = photo.base64;
+      body.photoMimeType = photo.mimeType;
+    }
+
     input.value = '';
     input.disabled = true;
+    showLoading();
 
     fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'addComment', id: roomId, text: text, author: author, token: savedToken })
+      body: JSON.stringify(body)
     })
       .then(function(res){ return res.json(); })
       .then(function(result){
         input.disabled = false;
+        hideLoading();
         if(result.error){
-          alert('コメントの送信に失敗しました');
+          alert('コメントの送信に失敗しました：' + result.error);
           input.value = text;
           return;
         }
+        removeCommentPhoto(idx);
         loadRoomsQuietly();
       })
       .catch(function(){
         input.disabled = false;
+        hideLoading();
         alert('通信エラーが発生しました');
         input.value = text;
       });
