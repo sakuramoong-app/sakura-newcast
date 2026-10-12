@@ -630,13 +630,16 @@
 
   .room-comments{ margin-top:6px; max-height:200px; overflow-y:auto; }
   .room-comment{
-    background:#FAF8F6;
+    background:#fff;
+    border:1px solid rgba(0,0,0,.06);   /* 1人のコメントごとに枠（背景は書いた内勤の色を薄く） */
+    border-left-width:5px;        /* 左の太線は書いた内勤の色（内勤カレンダーと同じ） */
     border-radius:10px;
     padding:8px 10px;
-    margin-bottom:6px;
+    margin-bottom:8px;
   }
-  .room-comment-meta{ font-size:10px; color:var(--sub); margin-bottom:2px; }
-  .room-comment-text{ font-size:12.5px; color:var(--ink); white-space:pre-wrap; }
+  .room-comment-meta{ font-size:10px; color:var(--sub); margin-bottom:4px; }
+  .room-comment-who{ font-weight:700; font-size:10.5px; }
+  .room-comment-text{ font-size:14px; line-height:1.6; color:var(--ink); white-space:pre-wrap; }
   .room-comment-empty{ font-size:11.5px; color:var(--sub); padding:6px 0; }
   .room-comment-edit-btn{
     border:none;
@@ -778,6 +781,86 @@
     text-align:center;
     padding:60px 20px;
   }
+
+  /* ---------- 小窓・小さなボタン・日付欄（全体のデザインに合わせる） ---------- */
+  .sm-modal{
+    display:none; position:fixed; inset:0; z-index:900;
+    background:rgba(92,75,79,.5);
+    align-items:flex-start; justify-content:center; overflow:auto; padding:28px 14px;
+  }
+  .sm-modal.show{ display:flex; }
+  .sm-modal-card{
+    position:relative; background:#fff; border-radius:18px; width:100%; max-width:560px;
+    padding:20px 18px 18px; box-shadow:0 10px 30px rgba(217,160,180,.35);
+  }
+  .sm-modal-x{
+    position:absolute; top:10px; right:12px; width:32px; height:32px; border:none; border-radius:99px;
+    background:var(--pink-soft); color:#c9556a; font-size:18px; font-weight:700; cursor:pointer; line-height:1;
+  }
+  .sm-modal-title{ font-weight:800; font-size:15px; color:var(--ink); margin:0 36px 6px 0; }
+  .sm-modal-note{ font-size:11.5px; color:var(--sub); line-height:1.6; margin-bottom:12px; }
+  .sm-item-row{ display:flex; gap:6px; align-items:center; margin-bottom:7px; padding:3px; border-radius:12px; transition:background .15s; }
+  .sm-item-row.over{ background:var(--pink-soft); }
+  .sm-item-row input[type=text]{ flex:1; padding:8px 12px; font-size:13px; }
+  .sm-grip{ cursor:grab; font-size:17px; color:#cbb8bd; padding:0 2px; user-select:none; }
+  .sm-icon-btn{
+    flex:0 0 auto; width:32px; height:32px; border:none; border-radius:99px; cursor:pointer;
+    background:var(--lav-soft); color:#6c5896; font-size:13px; font-weight:800; font-family:inherit;
+  }
+  .sm-icon-btn.danger{ background:var(--pink-soft); color:#c9556a; }
+  .sm-add-btn{
+    display:block; width:100%; margin:8px 0 16px; padding:9px; border-radius:99px; cursor:pointer;
+    border:1.5px dashed var(--pink); background:#fff; color:#c9556a; font-weight:800; font-size:13px; font-family:inherit;
+  }
+  .sm-modal-actions{ display:flex; gap:8px; }
+  .sm-btn-primary, .sm-btn-sub{
+    flex:1; padding:11px; border:none; border-radius:99px; font-weight:800; font-size:14px; cursor:pointer; font-family:inherit;
+  }
+  .sm-btn-primary{ background:var(--pink); color:#fff; }
+  .sm-btn-sub{ background:#F1ECEA; color:var(--sub); }
+  .sm-pill-btn{
+    border:none; border-radius:99px; padding:6px 13px; cursor:pointer; font-family:inherit;
+    background:var(--lav-soft); color:#6c5896; font-size:12px; font-weight:700;
+  }
+  .sm-date{
+    font-family:inherit; font-size:12px; color:var(--ink); padding:4px 10px; margin-left:4px;
+    border:1.5px solid #eee; border-radius:99px; background:#FAF8F6;
+  }
+  .sm-date:focus{ outline:none; border-color:var(--pink); background:#fff; }
+  .sm-sort{ display:flex; align-items:center; gap:8px; margin:0 0 12px; font-size:12.5px; color:var(--sub); font-weight:700; }
+  .sm-select{
+    font-family:inherit; font-size:13px; color:var(--ink); padding:7px 12px;
+    border:1.5px solid #eee; border-radius:99px; background:#FAF8F6;
+  }
+  .sm-select:focus{ outline:none; border-color:var(--pink); }
+  .sm-field-label{ display:block; font-size:12px; font-weight:700; color:var(--sub); margin:12px 0 5px; }
+  .sm-wide{ width:100%; padding:9px 13px; font-size:14px; }
+  .sm-textarea{
+    width:100%; min-height:64px; padding:10px 13px; font-size:14px; font-family:inherit; color:var(--ink);
+    border:1.5px solid #eee; border-radius:11px; background:#FAF8F6; resize:vertical;
+  }
+  .sm-textarea:focus{ outline:none; border-color:var(--pink); background:#fff; }
+  .sm-members{ display:flex; flex-wrap:wrap; gap:6px; }
+  .sm-mem{ border:1.5px solid; border-radius:99px; background:#fff; padding:6px 11px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .sm-check{ display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--ink); margin-top:14px; cursor:pointer; }
+  .sm-due-btn{
+    border:1.5px dashed #EBC9D2; border-radius:99px; background:#fff; color:var(--sub);
+    padding:4px 11px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .sm-due-btn.set{ border-style:solid; border-color:var(--lav); color:#6c5896; background:var(--lav-soft); }
+  .sm-due-btn.late{ border-style:solid; border-color:#e8899b; color:#c9556a; background:var(--pink-soft); }
+  .sm-back-row{ display:flex; gap:8px; justify-content:center; margin:16px 0 4px; flex-wrap:wrap; }
+  .sm-back-fab{ display:none; position:fixed; right:14px; bottom:18px; z-index:800; gap:8px; align-items:center; }
+  .sm-back-fab.show{ display:flex; }
+  .sm-back-fab-main, .sm-back-fab-close{
+    border:none; border-radius:99px; padding:11px 16px; cursor:pointer; font-family:inherit;
+    font-size:13px; font-weight:800; white-space:nowrap;
+  }
+  .sm-back-fab-main{
+    background:var(--pink); color:#fff; max-width:52vw; overflow:hidden; text-overflow:ellipsis;
+    box-shadow:0 6px 18px rgba(201,85,106,.35);
+  }
+  .sm-back-fab-close{ background:#fff; color:var(--sub); border:1.5px solid #EBC9D2; box-shadow:0 6px 18px rgba(217,160,180,.25); }
 
   .loading-overlay{
     display:none;
@@ -922,6 +1005,15 @@
 
   // 内勤コメントの投稿者選択肢
   var COMMENT_AUTHORS_LOCAL = ['きゃ', 'すや', 'らん', 'わか', 'かみ'];
+  // 内勤ごとのマークと色（内勤カレンダーと同じ）
+  var STAFF_MARKS = {
+    'きゃ': { emoji: '🧡', color: '#e8590c', bg: '#fff4ee' },
+    'すや': { emoji: '💗', color: '#d6579e', bg: '#fff3fa' },
+    'らん': { emoji: '💙', color: '#4d96d9', bg: '#f1f7fe' },
+    'かみ': { emoji: '🌙', color: '#3b5bdb', bg: '#f0f3fe' },
+    'わか': { emoji: '🦉', color: '#8a6fd1', bg: '#f6f2fe' }
+  };
+  function staffMark(name){ return STAFF_MARKS[name] || { emoji: '🌸', color: '#c9556a', bg: '#FDF3F5' }; }
 
   // サクラ・ラナ系のランク別バックプリセット（60分・90分・120分）
   var RANK_PRESETS_LOCAL = {
@@ -1304,6 +1396,7 @@
           return;
         }
         globalChecklistMeta = data.checklistMeta || {};
+        globalStaffChecklistItems = data.staffChecklistItems || [];
         globalTalkChecklistMeta = data.talkChecklistMeta || {};
         globalStoreList = data.storeList || [];
         lastRoomsData = data.rooms || [];
@@ -1335,7 +1428,18 @@
       }
     });
 
+    activeRooms = sortRoomIdx(activeRooms, rooms);
+    closedRooms = sortRoomIdx(closedRooms, rooms);
+
     var html = '';
+
+    // 並び替え
+    var sortMode = getRoomSort();
+    var sortOpts = [['new','作成日（新しい順）'],['old','作成日（古い順）'],['name','名前順'],['progress','進み具合が少ない順'],['due','期限が近い順']];
+    html += '<div class="sm-sort">並び替え ';
+    html += '<select class="sm-select" onchange="setRoomSort(this.value)">';
+    sortOpts.forEach(function(o){ html += '<option value="' + o[0] + '"' + (o[0] === sortMode ? ' selected' : '') + '>' + o[1] + '</option>'; });
+    html += '</select></div>';
 
     html += '<div class="room-group-header" onclick="toggleRoomGroup(\'active\')">';
     html += '<span class="room-group-title">🟢 稼働中</span>';
@@ -1509,7 +1613,8 @@
 
       // アコーディオン3：内勤チェック（キャストには見えません）
       html += renderAccordion('staffonly' + idx, '🔒 内勤チェック（キャストには見えません）', staffOnlyDoneCount, staffOnlyKeys.length, (function(){
-        var inner = '';
+        var inner = '<div style="text-align:right;margin-bottom:6px;"><button type="button" onclick="openStaffChecklistEditor()" '
+                  + 'class="sm-pill-btn">⚙️ 項目を追加・削除</button></div>';
         staffOnlyKeys.forEach(function(key){
           var meta = globalChecklistMeta[key];
           var state = checklist[key] || { done: false };
@@ -1529,8 +1634,9 @@
         displayOrder.forEach(function(item){
           var c = item.comment;
           var origIdx = item.originalIndex;
-          html += '<div class="room-comment" id="commentView_' + idx + '_' + origIdx + '">';
-          html += '<div class="room-comment-meta">' + escapeHtml(c.author || '内勤') + '　' + formatDate(c.at) + (c.editedAt ? '　（編集済み）' : '') + '</div>';
+          var mk = staffMark(c.author);
+          html += '<div class="room-comment" id="commentView_' + idx + '_' + origIdx + '" style="border-left-color:' + mk.color + ';background:' + mk.bg + ';">';
+          html += '<div class="room-comment-meta"><span class="room-comment-who" style="color:' + mk.color + ';">' + mk.emoji + ' ' + escapeHtml(c.author || '内勤') + '</span>　' + formatDate(c.at) + (c.editedAt ? '　（編集済み）' : '') + '</div>';
           if(c.text){
             html += '<div class="room-comment-text">' + escapeHtml(c.text) + '</div>';
           }
@@ -1539,6 +1645,7 @@
           }
           if(!isClosed){
             html += '<button class="room-comment-edit-btn" onclick="startEditComment(' + idx + ',' + origIdx + ')">編集</button>';
+            html += '<button class="room-comment-edit-btn" style="margin-left:12px;color:#d9534f;" onclick="deleteComment(\'' + room.roomId + '\',' + origIdx + ')">削除</button>';
           }
           html += '</div>';
           html += '<div class="room-comment room-comment-edit-form" id="commentEdit_' + idx + '_' + origIdx + '" style="display:none;">';
@@ -1553,7 +1660,7 @@
       html += '</div>';
       html += '<select class="room-comment-author" id="commentAuthor' + idx + '">';
       COMMENT_AUTHORS_LOCAL.forEach(function(name){
-        html += '<option value="' + name + '">' + name + '</option>';
+        html += '<option value="' + name + '">' + staffMark(name).emoji + ' ' + name + '</option>';
       });
       html += '</select>';
       html += '<textarea class="room-comment-input" id="commentInput' + idx + '" placeholder="コメントを入力（改行できます・スクショの貼り付けもできます）" onpaste="handleCommentPaste(' + idx + ', event)"></textarea>';
@@ -1566,6 +1673,12 @@
       html += '</div>';
 
       html += '</div>'; // roomCaptureArea
+
+      // いちばん下から、キャスト名のところへ戻る
+      html += '<div class="sm-back-row">';
+      html += '<button type="button" class="sm-pill-btn" onclick="scrollToRoomTop(' + idx + ')">▲ ' + escapeHtml(room.castName || 'キャスト') + ' の上に戻る</button>';
+      html += '<button type="button" class="sm-pill-btn" style="background:#F1ECEA;color:var(--sub);" onclick="closeRoomAndBack(' + idx + ')">閉じる</button>';
+      html += '</div>';
 
       html += '</div>'; // room-body
 
@@ -1597,6 +1710,58 @@
       caret.textContent = '▴';
     }
   }
+
+  /* ---------- キャスト名のところへ戻る ----------
+     ルームを開いて下まで見ているとき、右下に「▲ ○○」ボタンを出す（押すとそのキャスト名へ戻る）。
+     ルームのいちばん下にも同じボタンと「閉じる」がある。 */
+  function scrollToRoomTop(idx){
+    var el = document.getElementById('roomItem' + idx);
+    if(!el) return;
+    var y = el.getBoundingClientRect().top + window.pageYOffset - 10;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }
+  function closeRoomAndBack(idx){
+    var body = document.getElementById('roomBody' + idx);
+    if(body && body.classList.contains('show')) toggleRoomAccordion(idx);
+    scrollToRoomTop(idx);
+  }
+  (function(){
+    // 右下：「▲ キャスト名」（そのキャストの上へ）と「閉じる」（ルームを閉じて上へ）
+    var wrap = document.createElement('div');
+    wrap.className = 'sm-back-fab';
+    var fab = document.createElement('button');
+    fab.type = 'button';
+    fab.className = 'sm-back-fab-main';
+    var fabClose = document.createElement('button');
+    fabClose.type = 'button';
+    fabClose.className = 'sm-back-fab-close';
+    fabClose.textContent = '閉じる';
+    wrap.appendChild(fab);
+    wrap.appendChild(fabClose);
+    document.body.appendChild(wrap);
+    var target = -1;
+    fab.onclick = function(){ if(target >= 0) scrollToRoomTop(target); };
+    fabClose.onclick = function(){ if(target >= 0){ closeRoomAndBack(target); setTimeout(update, 400); } };
+    function update(){
+      target = -1;
+      var bodies = document.querySelectorAll('.room-body.show');
+      for(var i = 0; i < bodies.length; i++){
+        var item = bodies[i].parentNode;
+        var r = item.getBoundingClientRect();
+        // キャスト名（ルームの上）が画面の上に隠れていて、ルームの中を見ているとき
+        if(r.top < -40 && r.bottom > window.innerHeight * 0.3){
+          target = Number(bodies[i].id.replace('roomBody', ''));
+          var nameEl = item.querySelector('.room-name');
+          var nm = nameEl ? (nameEl.childNodes[0] && nameEl.childNodes[0].textContent) : '';
+          fab.textContent = '▲ ' + (nm || '上へ');
+          break;
+        }
+      }
+      wrap.classList.toggle('show', target >= 0);
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+  })();
 
   function toggleRoomAccordion(idx){
     var body = document.getElementById('roomBody' + idx);
@@ -1727,19 +1892,301 @@
     });
   }
 
+  // 日付（YYYY-MM-DD か ISO）→ 10/13
+  function shortDate(v){
+    if(!v) return '';
+    var m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m && String(v).length === 10) return Number(m[2]) + '/' + Number(m[3]);
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? '' : (d.getMonth() + 1) + '/' + d.getDate();
+  }
+  function todayYmd(){
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
   function renderRoomCheckItem(roomId, key, meta, state, isClosed){
-    var html = '<div class="room-check-item">';
+    var html = '<div class="room-check-item" style="flex-wrap:wrap;">';
     var canClick = !isClosed;
     if(canClick){
       html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + ' clickable" onclick="toggleStaffChecklist(\'' + roomId + '\',\'' + key + '\',' + (!state.done) + ', this)">' + (state.done ? '✓' : '') + '</div>';
     } else {
       html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
     }
-    html += '<div class="room-check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
+    html += '<div class="room-check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label);
+    // チェックした日付
+    if(state.done && state.at) html += '<span class="ck-date" style="font-size:11px;color:var(--mint);font-weight:700;margin-left:6px;">✓ ' + shortDate(state.at) + '</span>';
+    html += '</div>';
     var badgeText = meta.owner === 'cast' ? 'キャスト回答' : (meta.owner === 'staffOnly' ? '内勤専用' : 'キャストに表示');
     html += '<span class="room-check-ownerbadge ' + meta.owner + '">' + badgeText + '</span>';
+    // 期限（つけると内勤カレンダーに予定が入る。チェックを入れるとカレンダーから消える）
+    if(!isClosed){
+      var due = state.due || '';
+      var late = due && !state.done && due < todayYmd();
+      var ev = state.event || {};
+      html += '<div style="width:100%;padding-left:34px;margin-top:4px;">';
+      html += '<button type="button" class="sm-due-btn' + (late ? ' late' : (due ? ' set' : '')) + '" onclick="openDueModal(\'' + roomId + '\',\'' + key + '\')">'
+            + (due ? '📅 期限 ' + shortDate(due) + (ev.time ? ' ' + escapeHtml(ev.time) : '') + (ev.notifyAt ? ' 🔔' : '') : '＋ 期限をつける') + '</button>';
+      if(late) html += '<span style="font-size:11px;color:#d9534f;font-weight:700;margin-left:6px;">⚠️ 期限を過ぎています</span>';
+      else if(due && !state.done) html += '<span style="font-size:11px;color:var(--sub);margin-left:6px;">内勤カレンダーに入っています</span>';
+      html += '</div>';
+    }
     html += '</div>';
     return html;
+  }
+
+  /* ---------- 期限の小窓（内勤カレンダーの「予定」と同じ中身を決める） ---------- */
+  var NAIKIN_MEMBERS = [
+    { id: 'all',  name: '全員', emoji: '🌸', color: '#e5638c' },
+    { id: 'kya',  name: 'きゃ', emoji: '🧡', color: '#e8590c' },
+    { id: 'suya', name: 'すや', emoji: '💗', color: '#d6579e' },
+    { id: 'ran',  name: 'らん', emoji: '💙', color: '#4d96d9' },
+    { id: 'kami', name: 'かみ', emoji: '🌙', color: '#3b5bdb' },
+    { id: 'waka', name: 'わか', emoji: '🦉', color: '#8a6fd1' }
+  ];
+  var dueCtx = null;   // { roomId, key, members: [] }
+
+  function openDueModal(roomId, key){
+    var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
+    if(!room) return;
+    var meta = globalChecklistMeta[key] || {};
+    var st = (room.checklist || {})[key] || {};
+    var ev = st.event || {};
+    dueCtx = { roomId: roomId, key: key, label: meta.label || key, members: (ev.members || []).slice() };
+
+    var ov = document.getElementById('dueModal');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'dueModal';
+      ov.className = 'sm-modal';
+      var downOnBackdrop = false;
+      ov.addEventListener('mousedown', function(e){ downOnBackdrop = (e.target === ov); });
+      ov.addEventListener('click', function(e){ if(e.target === ov && downOnBackdrop) closeDueModal(); });
+      document.body.appendChild(ov);
+    }
+    var defTitle = ('📝' + (room.castName || '新人') + '：' + (meta.label || key)).slice(0, 40);
+    var timeOpts = '<option value="">終日（時間なし）</option>';
+    var notifyOpts = '';
+    for(var h = 0; h < 24; h++){
+      timeOpts += '<option value="' + h + ':00">' + h + ':00</option><option value="' + h + ':30">' + h + ':30</option>';
+      var hh = String(h).padStart(2, '0');
+      notifyOpts += '<option value="' + hh + ':00">' + h + ':00</option><option value="' + hh + ':30">' + h + ':30</option>';
+    }
+    var nParts = (ev.notifyAt || '').split(' ');
+
+    var html = '<div class="sm-modal-card">';
+    html += '<button type="button" class="sm-modal-x" onclick="closeDueModal()" aria-label="閉じる">×</button>';
+    html += '<div class="sm-modal-title">📅 期限をつける</div>';
+    html += '<div class="sm-modal-note">' + escapeHtml(room.castName || '') + '／' + escapeHtml(meta.label || key) + '<br>内勤カレンダーの「予定」に入ります。チェックを入れると予定は消えます。</div>';
+    html += '<label class="sm-field-label">期限の日</label><input type="date" class="sm-date sm-wide" id="dueDate" value="' + escapeHtml(st.due || '') + '">';
+    html += '<label class="sm-field-label">予定のタイトル</label><input type="text" id="dueTitle" maxlength="40" value="' + escapeHtml(ev.title || defTitle) + '">';
+    html += '<label class="sm-field-label">メンバー</label><div class="sm-members" id="dueMembers"></div>';
+    html += '<label class="sm-field-label">時間</label><select class="sm-select sm-wide" id="dueTime">' + timeOpts + '</select>';
+    html += '<label class="sm-field-label">メモ</label><textarea id="dueMemo" maxlength="200" class="sm-textarea" placeholder="持ち物、場所など">' + escapeHtml(ev.memo || '') + '</textarea>';
+    html += '<label class="sm-check"><input type="checkbox" id="dueNotify" onchange="document.getElementById(\'dueNotifyRow\').style.display=this.checked?\'flex\':\'none\'"' + (ev.notifyAt ? ' checked' : '') + '> 📧 メールで通知する</label>';
+    html += '<div id="dueNotifyRow" style="display:' + (ev.notifyAt ? 'flex' : 'none') + ';gap:8px;margin-top:6px;">'
+          + '<input type="date" class="sm-date sm-wide" id="dueNotifyDate" value="' + escapeHtml(nParts[0] || '') + '">'
+          + '<select class="sm-select" id="dueNotifyTime">' + notifyOpts + '</select></div>';
+    html += '<div class="sm-modal-actions" style="margin-top:16px;">';
+    html += '<button type="button" class="sm-btn-primary" onclick="saveDueModal()">保存する</button>';
+    if(st.due) html += '<button type="button" class="sm-btn-sub" style="color:#c9556a;" onclick="clearDueModal()">期限を外す</button>';
+    html += '<button type="button" class="sm-btn-sub" onclick="closeDueModal()">キャンセル</button>';
+    html += '</div></div>';
+    ov.innerHTML = html;
+    document.getElementById('dueTime').value = ev.time || '';
+    if(nParts[1]) document.getElementById('dueNotifyTime').value = nParts[1];
+    renderDueMembers();
+    ov.classList.add('show');
+  }
+  function renderDueMembers(){
+    var el = document.getElementById('dueMembers');
+    if(!el || !dueCtx) return;
+    el.innerHTML = NAIKIN_MEMBERS.map(function(m){
+      var on = dueCtx.members.indexOf(m.id) >= 0;
+      return '<button type="button" class="sm-mem' + (on ? ' on' : '') + '" style="border-color:' + m.color + ';' + (on ? 'background:' + m.color + ';color:#fff;' : 'color:' + m.color + ';') + '" '
+           + 'onclick="toggleDueMember(\'' + m.id + '\')">' + m.emoji + ' ' + m.name + '</button>';
+    }).join('');
+  }
+  function toggleDueMember(id){
+    var a = dueCtx.members;
+    if(id === 'all'){ dueCtx.members = a.indexOf('all') >= 0 ? [] : ['all']; }
+    else{
+      a = a.filter(function(x){ return x !== 'all'; });
+      var i = a.indexOf(id);
+      if(i >= 0) a.splice(i, 1); else a.push(id);
+      dueCtx.members = a;
+    }
+    renderDueMembers();
+  }
+  function closeDueModal(){
+    var ov = document.getElementById('dueModal');
+    if(ov) ov.classList.remove('show');
+  }
+  function saveDueModal(){
+    var due = document.getElementById('dueDate').value;
+    if(!due){ alert('期限の日を選んでください'); return; }
+    var notifyAt = '';
+    if(document.getElementById('dueNotify').checked){
+      var nd = document.getElementById('dueNotifyDate').value, nt = document.getElementById('dueNotifyTime').value;
+      if(!nd || !nt){ alert('通知の日時を選んでください'); return; }
+      notifyAt = nd + ' ' + nt;
+    }
+    var title = document.getElementById('dueTitle').value.trim();
+    if(!title){ alert('予定のタイトルを入れてください'); return; }
+    sendDue(due, { time: document.getElementById('dueTime').value, title: title, members: dueCtx.members,
+                   memo: document.getElementById('dueMemo').value.trim(), notifyAt: notifyAt });
+  }
+  function clearDueModal(){
+    if(!confirm('期限を外しますか？（内勤カレンダーの予定も消えます）')) return;
+    sendDue('', null);
+  }
+  function sendDue(due, event){
+    var c = dueCtx;
+    showLoading();
+    roomFetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setDue', id: c.roomId, key: c.key, due: due, label: c.label, event: event, token: savedToken })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        hideLoading();
+        if(result.error){
+          if(String(result.error).indexOf('unauthorized') >= 0){ closeDueModal(); handleRoomAuthError(); return; }
+          alert('期限の保存に失敗しました：' + result.error);
+          return;
+        }
+        closeDueModal();
+        loadRoomsQuietly();
+      })
+      .catch(function(){ hideLoading(); alert('通信エラーが発生しました'); });
+  }
+
+  /* ---------- 内勤チェックの項目を追加・削除・並べ替え（全部のルームで共通） ---------- */
+  var globalStaffChecklistItems = [];
+  var editingStaffItems = [];
+
+  function openStaffChecklistEditor(){
+    editingStaffItems = globalStaffChecklistItems.map(function(x){ return { key: x.key, label: x.label }; });
+    var ov = document.getElementById('staffChecklistEditor');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'staffChecklistEditor';
+      ov.className = 'sm-modal';
+      // 外側の空いているところを押したら閉じる（中で押し始めて外で離したときは閉じない）
+      var downOnBackdrop = false;
+      ov.addEventListener('mousedown', function(e){ downOnBackdrop = (e.target === ov); });
+      ov.addEventListener('click', function(e){ if(e.target === ov && downOnBackdrop) closeStaffChecklistEditor(); });
+      document.body.appendChild(ov);
+    }
+    ov.classList.add('show');
+    renderStaffChecklistEditor();
+  }
+  function closeStaffChecklistEditor(){
+    var ov = document.getElementById('staffChecklistEditor');
+    if(ov) ov.classList.remove('show');
+  }
+  function renderStaffChecklistEditor(){
+    var ov = document.getElementById('staffChecklistEditor');
+    var html = '<div class="sm-modal-card">';
+    html += '<button type="button" class="sm-modal-x" onclick="closeStaffChecklistEditor()" aria-label="閉じる">×</button>';
+    html += '<div class="sm-modal-title">🔒 内勤チェックの項目</div>';
+    html += '<div class="sm-modal-note">全部のルームで共通です。消しても、今までのチェックの記録は残ります（同じ項目を追加し直すと戻ります）。<br>⠿ をつかんで上下に動かすと並べ替えできます（スマホは ↑↓）。</div>';
+    editingStaffItems.forEach(function(it, i){
+      // ⠿ を押しているあいだだけ、行ごとドラッグできる（入力欄の文字選びのじゃまをしないため）
+      html += '<div class="sm-item-row" ondragstart="staffItemDragStart(event,' + i + ')" ondragover="staffItemDragOver(event)"'
+            + ' ondragleave="this.classList.remove(\'over\')" ondrop="staffItemDrop(event,' + i + ')" ondragend="this.draggable=false">';
+      html += '<span class="sm-grip" title="つかんで並べ替え" onmousedown="this.parentNode.draggable=true" onmouseup="this.parentNode.draggable=false">⠿</span>';
+      html += '<input type="text" value="' + escapeHtml(it.label) + '" maxlength="100" oninput="editingStaffItems[' + i + '].label=this.value">';
+      html += '<button type="button" class="sm-icon-btn" onclick="moveStaffItem(' + i + ',-1)" aria-label="上へ">↑</button>';
+      html += '<button type="button" class="sm-icon-btn" onclick="moveStaffItem(' + i + ',1)" aria-label="下へ">↓</button>';
+      html += '<button type="button" class="sm-icon-btn danger" onclick="removeStaffItem(' + i + ')" aria-label="消す">🗑</button>';
+      html += '</div>';
+    });
+    html += '<button type="button" class="sm-add-btn" onclick="addStaffItem()">＋ 項目を追加</button>';
+    html += '<div class="sm-modal-actions">';
+    html += '<button type="button" class="sm-btn-primary" onclick="saveStaffChecklistItems()">保存する</button>';
+    html += '<button type="button" class="sm-btn-sub" onclick="closeStaffChecklistEditor()">キャンセル</button>';
+    html += '</div></div>';
+    ov.innerHTML = html;
+  }
+  var staffDragFrom = -1;
+  function staffItemDragStart(ev, i){
+    staffDragFrom = i;
+    try{ ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(i)); }catch(e){}
+  }
+  function staffItemDragOver(ev){
+    ev.preventDefault();
+    ev.currentTarget.classList.add('over');
+  }
+  function staffItemDrop(ev, to){
+    ev.preventDefault();
+    var from = staffDragFrom;
+    staffDragFrom = -1;
+    if(from < 0 || from === to) { renderStaffChecklistEditor(); return; }
+    var it = editingStaffItems.splice(from, 1)[0];
+    editingStaffItems.splice(to, 0, it);
+    renderStaffChecklistEditor();
+  }
+
+  function moveStaffItem(i, d){
+    var j = i + d;
+    if(j < 0 || j >= editingStaffItems.length) return;
+    var t = editingStaffItems[i]; editingStaffItems[i] = editingStaffItems[j]; editingStaffItems[j] = t;
+    renderStaffChecklistEditor();
+  }
+  function removeStaffItem(i){
+    if(!confirm('「' + editingStaffItems[i].label + '」を消しますか？')) return;
+    editingStaffItems.splice(i, 1);
+    renderStaffChecklistEditor();
+  }
+  function addStaffItem(){
+    var label = prompt('追加する項目の名前');
+    if(!label || !label.trim()) return;
+    editingStaffItems.push({ key: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), label: label.trim() });
+    renderStaffChecklistEditor();
+  }
+  function saveStaffChecklistItems(){
+    var items = editingStaffItems.filter(function(x){ return x.label && x.label.trim(); });
+    showLoading();
+    roomFetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'saveStaffChecklist', items: items, token: savedToken }) })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        hideLoading();
+        if(result.error){
+          if(String(result.error).indexOf('unauthorized') >= 0){ handleRoomAuthError(); return; }
+          alert('保存に失敗しました：' + result.error);
+          return;
+        }
+        closeStaffChecklistEditor();
+        loadRooms();
+      })
+      .catch(function(){ hideLoading(); alert('通信エラーが発生しました'); });
+  }
+
+  /* ---------- ルームの並び替え ---------- */
+  var ROOM_SORT_KEY = 'roomSortOrder';
+  function getRoomSort(){ try{ return localStorage.getItem(ROOM_SORT_KEY) || 'new'; }catch(e){ return 'new'; } }
+  function setRoomSort(v){
+    try{ localStorage.setItem(ROOM_SORT_KEY, v); }catch(e){}
+    renderRoomList(lastRoomsData);
+  }
+  function sortRoomIdx(list, rooms){
+    var mode = getRoomSort();
+    var metaKeys = Object.keys(globalChecklistMeta);
+    function progress(r){ var c = r.checklist || {}; return metaKeys.filter(function(k){ return c[k] && c[k].done; }).length; }
+    function nearestDue(r){
+      var c = r.checklist || {}, best = '9999-99-99';
+      metaKeys.forEach(function(k){ if(c[k] && c[k].due && !c[k].done && c[k].due < best) best = c[k].due; });
+      return best;
+    }
+    return list.slice().sort(function(a, b){
+      var ra = rooms[a], rb = rooms[b];
+      if(mode === 'old') return new Date(ra.createdAt) - new Date(rb.createdAt);
+      if(mode === 'name') return String(ra.castName || '').localeCompare(String(rb.castName || ''), 'ja');
+      if(mode === 'progress') return progress(ra) - progress(rb);
+      if(mode === 'due'){ var da = nearestDue(ra), db = nearestDue(rb); return da < db ? -1 : da > db ? 1 : 0; }
+      return new Date(rb.createdAt) - new Date(ra.createdAt);
+    });
   }
 
   function toggleRoomChecklist(idx){
@@ -1752,7 +2199,7 @@
     var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
     var prevState = room && room.checklist[key] ? room.checklist[key].done : false;
     if(room){
-      room.checklist[key] = { done: done, at: done ? new Date().toISOString() : '' };
+      room.checklist[key] = Object.assign({}, room.checklist[key] || {}, { done: done, at: done ? new Date().toISOString() : '' });
     }
 
     if(iconEl){
@@ -1767,7 +2214,7 @@
 
     roomFetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: true, token: savedToken })
+      body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: true, label: (globalChecklistMeta[key] || {}).label || '', token: savedToken })
     })
       .then(function(res){ return res.json(); })
       .then(function(result){
@@ -1780,6 +2227,19 @@
         // サーバーの最新checklistをローカルに反映し、進捗数だけ軽量に更新する（全件再取得はしない）
         if(room && result.checklist){
           room.checklist = result.checklist;
+        }
+        // チェックした日付の表示をその場で直す
+        var lbl = iconEl && iconEl.nextElementSibling;
+        if(lbl){
+          var old = lbl.querySelector('.ck-date');
+          if(old) old.remove();
+          if(done){
+            var sp = document.createElement('span');
+            sp.className = 'ck-date';
+            sp.style.cssText = 'font-size:11px;color:var(--mint);font-weight:700;margin-left:6px;';
+            sp.textContent = '✓ ' + shortDate(new Date().toISOString());
+            lbl.appendChild(sp);
+          }
         }
         updateAccordionProgressCounts();
       })
@@ -1796,6 +2256,7 @@
       .then(function(data){
         if(data.error) return;
         globalChecklistMeta = data.checklistMeta || {};
+        globalStaffChecklistItems = data.staffChecklistItems || [];
         globalTalkChecklistMeta = data.talkChecklistMeta || {};
         globalStoreList = data.storeList || [];
         lastRoomsData = data.rooms || [];
@@ -1961,6 +2422,27 @@
       .then(function(result){
         if(result.error){
           alert('コメントの編集に失敗しました：' + result.error);
+          return;
+        }
+        var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
+        if(room) room.comments = result.comments;
+        loadRoomsQuietly();
+      })
+      .catch(function(){
+        alert('通信エラーが発生しました');
+      });
+  }
+
+  function deleteComment(roomId, origIdx){
+    if(!confirm('このコメントを削除しますか？（元に戻せません）')) return;
+    roomFetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteComment', id: roomId, index: origIdx, token: savedToken })
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          alert('コメントの削除に失敗しました：' + result.error);
           return;
         }
         var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });

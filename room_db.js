@@ -297,18 +297,59 @@ function defaultChecklist() {
     };
   });
 
+  /* ---------- 内勤チェックの項目（画面から追加・削除できる） ----------
+     キャストにも見える項目（CHECKLIST_ITEMS の staffOnly 以外）は決まったまま。
+     内勤チェック（staffOnly）は room_settings 'staffChecklist' の並びを使う。まだ無ければ今までの項目。 */
+  const CAST_KEYS = {};
+  for(const k in CHECKLIST_ITEMS){ if(CHECKLIST_ITEMS[k].owner !== 'staffOnly') CAST_KEYS[k] = true; }
+  function staffItems(saved){
+    if(Array.isArray(saved)) return saved.filter(x=>x && x.key && x.label);
+    const out = [];
+    for(const k in CHECKLIST_ITEMS){ if(CHECKLIST_ITEMS[k].owner === 'staffOnly') out.push({ key: k, label: CHECKLIST_ITEMS[k].label }); }
+    return out;
+  }
+  function buildMeta(items){
+    const meta = {};
+    items.forEach(x=>{ meta[x.key] = { label: x.label, owner: 'staffOnly' }; });
+    for(const k in CAST_KEYS) meta[k] = CHECKLIST_ITEMS[k];
+    return meta;
+  }
+
   /* ---------- 内勤の操作 ---------- */
   const STAFF = {
     async checkToken(){ return { valid: !!(await getStaffSession()) }; },
 
     async listRooms(){
       const rows = [];
+      const setting = sb.from('room_settings').select('value').eq('key', 'staffChecklist').maybeSingle();
       for(let from = 0; ; from += 1000){
         const part = q(await sb.from('room_rooms').select(LIST_COLS).order('created_at', { ascending: false }).range(from, from + 999));
         rows.push.apply(rows, part || []);
         if(!part || part.length < 1000) break;
       }
-      return { rooms: rows.map(roomOut), checklistMeta: CHECKLIST_ITEMS, talkChecklistMeta: TALK_CHECKLIST_ITEMS, storeList: STORE_LIST };
+      // 設定の表がまだ無いとき（031 を実行する前）も、今までの項目で開けるようにする
+      let s = null;
+      try{ s = q(await setting); }catch(e){ s = null; }
+      const items = staffItems(s && s.value);
+      return { rooms: rows.map(roomOut), checklistMeta: buildMeta(items), staffChecklistItems: items,
+               talkChecklistMeta: TALK_CHECKLIST_ITEMS, storeList: STORE_LIST };
+    },
+
+    // 内勤チェック（キャストに見えない項目）の並びを保存する。全部のルームで共通
+    async saveStaffChecklist(b){
+      const items = (Array.isArray(b.items) ? b.items : []).map(x=>({ key: str(x.key).slice(0, 60), label: str(x.label).trim().slice(0, 100) }))
+        .filter(x=>x.key && x.label && !CAST_KEYS[x.key]);
+      q(await sb.from('room_settings').upsert({ key: 'staffChecklist', value: items }));
+      return { success: true, staffChecklistItems: items, checklistMeta: buildMeta(items) };
+    },
+
+    async setDue(b){
+      return q(await sb.rpc('room_staff_due', { p_id: str(b.id), p_key: str(b.key), p_due: str(b.due), p_label: str(b.label),
+                                                p_event: (b.event && typeof b.event === 'object') ? b.event : null }));
+    },
+
+    async deleteComment(b){
+      return q(await sb.rpc('room_staff_delete_comment', { p_id: str(b.id), p_index: Number(b.index) }));
     },
 
     async createRoom(b){
@@ -340,8 +381,8 @@ function defaultChecklist() {
 
     async updateChecklist(b){
       if(!b.isStaff) return { error: 'forbidden' };
-      if(!CHECKLIST_ITEMS[b.key]) return { error: 'invalid_key' };
-      return q(await sb.rpc('room_staff_check', { p_id: str(b.id), p_field: 'checklist', p_key: b.key, p_done: !!b.done }));
+      if(!b.key || String(b.key).length > 60) return { error: 'invalid_key' };
+      return q(await sb.rpc('room_staff_check', { p_id: str(b.id), p_field: 'checklist', p_key: b.key, p_done: !!b.done, p_label: str(b.label) }));
     },
 
     async updateTalkChecklist(b){

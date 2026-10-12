@@ -782,6 +782,10 @@
   function closeGlossary(){
     document.getElementById('glossaryModal').classList.remove('show');
   }
+  // 外側の空いているところを押しても閉じる
+  document.getElementById('glossaryModal').addEventListener('click', function(e){
+    if(e.target === this) closeGlossary();
+  });
 
 
   function getParam(name){
@@ -901,6 +905,16 @@
     // チェックリスト
     html += '<div class="section alt">';
     html += '<div class="section-title">やることリスト</div>';
+    // ★ どれもキャスト本人がやること。どこで何をすればいいかも書く
+    var HOW_TO = {
+      guideReadByCast:   '下の「新人ガイド」を最後まで読んで、確認ボタンを押してください',
+      roadmapReadByCast: '「姫デコロードマップ」を読んで、確認ボタンを押してください',
+      profileSubmitted:  '下の「在籍プロフィール入力フォーム」から入力してください',
+      emailProvided:     '下の「メールアドレス」に入力して保存してください',
+      costumeUploaded:   '下の「衣装の写真」から写真をアップロードしてください',
+      kitChosen:         '下の「お仕事セットについて」で用意方法を選んでください'
+    };
+    html += '<p style="font-size:12.5px;color:var(--sub);margin:0 0 8px;">👉 のついた項目は、<b>ご自身でお願いいたします</b>。終わると ✓ がつきます（内勤が確認してつける項目もあります）。</p>';
     items.forEach(function(key){
       var meta = data.checklistMeta[key];
       var state = data.checklist[key] || { done: false };
@@ -911,9 +925,13 @@
       } else {
         html += '<div class="check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
       }
-      html += '<div class="check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label) + '</div>';
-      if(!isCast && !state.done){
-        html += '<span class="check-waiting-badge">内勤の確認待ち</span>';
+      html += '<div class="check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label);
+      if(!state.done && HOW_TO[key]){
+        html += '<div style="font-size:11.5px;color:var(--sub);font-weight:400;margin-top:2px;">' + HOW_TO[key] + '</div>';
+      }
+      html += '</div>';
+      if(!state.done){
+        html += '<span class="check-waiting-badge" style="background:var(--pink-soft,#FDEDF0);color:#c9556a;">👉ご自身でお願いいたします</span>';
       }
       html += '</div>';
     });
@@ -977,7 +995,12 @@
     } else {
       html += '<p style="font-size:13px;color:var(--sub);">現在、掲載店舗は設定されていません。</p>';
     }
-    html += '<div class="note-box" style="margin-top:8px;">キューティキューティ・逆アナル倶楽部・極門への在籍については、内勤と相談しながら決めています！ 気になる場合は気軽に聞いてください。</div>';
+    html += '<div class="note-box" style="margin-top:8px;">'
+          + '・キューティキューティ（女装レズコース専門店）<br>'
+          + '・逆アナル倶楽部（逆AF専門店）<br>'
+          + '・極門（SM専門店／ダミー店）<br>'
+          + '・エイティーン（学園系／ダミー店）<br>'
+          + 'こちらの在籍については、内勤と相談の上決めています！ 気になる場合は気軽に聞いてください。</div>';
     html += '</div>';
 
     // お仕事セット
@@ -1160,6 +1183,13 @@
     <li>少しヒールがあると女性らしい印象になります</li>
     <li>ただしデリヘルという性質上、ヒールが高すぎると歩き疲れてしまうため、程よい高さのローヒール（ピンヒールは避ける）がおすすめです</li>
     <li>色は何にでも合う無難な色（黒や白ベージュ系など）がおすすめです</li>
+  </ul>
+
+  <p><strong>撮影をキャンセルする場合</strong></p>
+  <ul>
+    <li>キャンセルの場合は、<strong>前日の19時まで</strong>にご連絡ください</li>
+    <li>当日キャンセルの場合、お店としてスタジオを使用する利用のペナルティが発生し、<strong>当月のスタジオ使用が不可</strong>となります</li>
+    <li>当日突然の体調不良はいたしかたありませんが、極力当日キャンセルではなく、<strong>前日19時までに内勤へLINEにて</strong>ご連絡いただけますと幸いです</li>
   </ul>
 </div>
 
