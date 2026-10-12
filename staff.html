@@ -826,9 +826,8 @@
   <div class="confidential-badge">🔒 社外秘</div>
   <span class="kicker">サクラムーングループ・内勤用</span>
   <h1>在籍作成ルーム管理</h1>
-  <p class="lead">合言葉を入力してください</p>
-  <input type="password" id="tokenInput" placeholder="合言葉" style="max-width:260px;margin:16px auto 0;">
-  <button class="btn" id="loginBtn" style="max-width:260px;margin:12px auto 0;" onclick="checkToken()">開く</button>
+  <!-- ★ ポータルからだけ入れる（合言葉でのログインは廃止） -->
+  <p class="lead" id="gateMsg">ポータルから開いてください</p>
 </div>
 
 <div id="mainApp" style="display:none;">
@@ -1035,46 +1034,72 @@
     return result;
   }
 
-  function checkToken(){
-    var token = document.getElementById('tokenInput').value.trim();
-    if(!token){
-      alert('合言葉を入力してください');
-      return;
-    }
+  /* ★ ポータルからだけ入れる（2026/10 合言葉でのログインは廃止）
+     ポータルから入ると、GASが「入館証」（期限つき）を発行する。
+     今まで合言葉を送っていた所（token）に、この入館証を送る。
+     期限は「ポータルでログインしてから20時間」。このブラウザにだけ覚えておく。 */
+  var ROOM_SESSION_KEY = 'roomPortalSession';   // {token, expiresAt}
 
-    var loginBtn = document.getElementById('loginBtn');
-    if(loginBtn){
-      loginBtn.disabled = true;
-      loginBtn.textContent = '確認中...';
-    }
+  function loadRoomSession(){
+    try{
+      var s = JSON.parse(localStorage.getItem(ROOM_SESSION_KEY) || 'null');
+      if(s && s.token && Number(s.expiresAt) > Date.now()) return s;
+    }catch(e){}
+    try{ localStorage.removeItem(ROOM_SESSION_KEY); }catch(e){}
+    return null;
+  }
+
+  function showGate(msg){
+    savedToken = null;
+    document.getElementById('gateMsg').textContent = msg || 'ポータルから開いてください';
+    document.getElementById('tokenGate').style.display = '';
+    document.getElementById('mainApp').style.display = 'none';
+  }
+
+  function openMainApp(s){
+    savedToken = s.token;
+    document.getElementById('tokenGate').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    renderStoreCheckboxes();
+    loadRooms();
+  }
+
+  // GASが入館証を受け付けなかったとき（期限切れ・無効化）
+  function handleRoomAuthError(){
+    try{ localStorage.removeItem(ROOM_SESSION_KEY); }catch(e){}
+    showGate('ログインの期限が切れました。ポータルから開き直してください');
+  }
+
+  // ポータルは「staff.html#portalSso=…&operator=名前」で開く。
+  // # 以降はサーバーに送られない。読んだらすぐURLから消す。
+  function takePortalSso(){
+    if(location.hash.indexOf('portalSso=') < 0) return null;
+    var hp = new URLSearchParams(location.hash.slice(1));
+    var ssoToken = hp.get('portalSso') || '';
+    var operator = hp.get('operator') || '';
+    history.replaceState(null, '', location.pathname + location.search);
+    return (ssoToken && operator) ? { ssoToken: ssoToken, operator: operator } : null;
+  }
+
+  function portalSsoLogin(sso){
+    showGate('⏳ ポータルから入っています…');
     showLoading();
-
-    fetch(GAS_URL + '?action=checkToken&token=' + encodeURIComponent(token))
+    // ※ 通行証は1回しか使えないので、失敗しても送り直さない
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'ssoLogin', ssoToken: sso.ssoToken, operator: sso.operator })
+    })
       .then(function(res){ return res.json(); })
-      .then(function(result){
-        if(loginBtn){
-          loginBtn.disabled = false;
-          loginBtn.textContent = '開く';
-        }
-        if(!result.valid){
-          hideLoading();
-          alert('合言葉が違います');
-          return;
-        }
-        savedToken = token;
-        sessionStorage.setItem(STAFF_TOKEN_STORAGE_KEY, token);
-        document.getElementById('tokenGate').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        renderStoreCheckboxes();
-        loadRooms();
+      .then(function(data){
+        hideLoading();
+        if(!data.success || !data.token) throw new Error('sso_failed');
+        var s = { token: data.token, expiresAt: Number(data.expiresAt) || (Date.now() + 20*60*60*1000) };
+        localStorage.setItem(ROOM_SESSION_KEY, JSON.stringify(s));
+        openMainApp(s);
       })
       .catch(function(){
         hideLoading();
-        if(loginBtn){
-          loginBtn.disabled = false;
-          loginBtn.textContent = '開く';
-        }
-        alert('通信エラーが発生しました。時間をおいて再度お試しください。');
+        showGate('入れませんでした。ポータルからもう一度開いてください');
       });
   }
 
@@ -1207,6 +1232,10 @@
       .then(function(res){ return res.json(); })
       .then(function(data){
         hideLoading();
+        if(data.error && String(data.error).indexOf('unauthorized') >= 0){
+          handleRoomAuthError();
+          return;
+        }
         if(data.error){
           document.getElementById('roomList').innerHTML = '<div class="empty">読み込みに失敗しました：' + data.error + '</div>';
           return;
@@ -2153,20 +2182,30 @@
     return div.innerHTML;
   }
 
-  // ページを開いたときに、以前入力した合言葉が残っていれば自動で使う
+  // 起動時：すでに入っていればそのまま開く／ポータルから来たら入館証をもらう／それ以外は案内だけ
   (function(){
-    var stored = sessionStorage.getItem(STAFF_TOKEN_STORAGE_KEY);
-    if(stored){
-      document.getElementById('tokenInput').value = stored;
-    }
+    try{ sessionStorage.removeItem(STAFF_TOKEN_STORAGE_KEY); }catch(e){}   // 以前の合言葉は使わない
+    var sso = takePortalSso();
+    var s = loadRoomSession();
+    if(s) openMainApp(s);
+    else if(sso) portalSsoLogin(sso);
+    else showGate();
   })();
 
-  // 合言葉入力欄でEnterキーを押したらログインする（PCでの利用を想定）
-  document.getElementById('tokenInput').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){
-      checkToken();
+  // ポータルでログインしてから20時間で自動ログアウト
+  // スリープ中に時刻を過ぎることもあるので、1分ごとと画面に戻ったときに確かめる
+  (function(){
+    function check(){
+      if(!savedToken) return;
+      if(!loadRoomSession()){
+        showGate('ポータルでログインしてから20時間たったので、ログアウトしました。ポータルから開き直してください');
+      }
     }
-  });
+    setInterval(check, 60 * 1000);
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') check();
+    });
+  })();
 </script>
 
 </body>
