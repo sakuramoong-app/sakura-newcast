@@ -245,7 +245,9 @@ function defaultChecklist() {
     const stores = body.stores && typeof body.stores === 'object' ? body.stores : defaultStores();
     const pick = (pre)=>({ back60: str(body[pre + '60']), back90: str(body[pre + '90']), back120: str(body[pre + '120']),
                            backHonshimei60: str(body[pre + 'Honshimei60']), backHonshimei90: str(body[pre + 'Honshimei90']) });
-    return { stores, backCutie: stores.cutie ? pick('backCutie') : {}, backGokumon: stores.gokumon ? pick('backGokumon') : {} };
+    // キューティ・極門は「お店ごとの表」の形（{rank, courses}）で届く。古い形（60/90/120分）にも対応
+    const other = (key, pre)=> !stores[key] ? {} : (body[pre] && typeof body[pre] === 'object' ? body[pre] : pick(pre));
+    return { stores, backCutie: other('cutie', 'backCutie'), backGokumon: other('gokumon', 'backGokumon') };
   }
   function roomOut(r){
     return {

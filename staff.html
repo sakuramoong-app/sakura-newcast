@@ -873,33 +873,9 @@
     <label>在籍店舗</label>
     <div id="storeCheckboxes" class="store-checkbox-group"></div>
 
-    <div id="cutieBackFields" class="store-back-fields" style="display:none;">
-      <label>キューティキューティ バック金額（円）</label>
-      <div class="row3">
-        <div><label style="margin:0 0 4px;">60分</label><input type="number" id="newCutie60" placeholder="9000"></div>
-        <div><label style="margin:0 0 4px;">90分</label><input type="number" id="newCutie90" placeholder="12000"></div>
-        <div><label style="margin:0 0 4px;">120分</label><input type="number" id="newCutie120" placeholder="16000"></div>
-      </div>
-      <label>キューティキューティ 本指名バック（円）</label>
-      <div class="row2">
-        <div><label style="margin:0 0 4px;">60分</label><input type="number" id="newCutieHonshimei60" placeholder="500"></div>
-        <div><label style="margin:0 0 4px;">90分</label><input type="number" id="newCutieHonshimei90" placeholder="1000"></div>
-      </div>
-    </div>
-
-    <div id="gokumonBackFields" class="store-back-fields" style="display:none;">
-      <label>極門 バック金額（円）</label>
-      <div class="row3">
-        <div><label style="margin:0 0 4px;">60分</label><input type="number" id="newGokumon60" placeholder="9000"></div>
-        <div><label style="margin:0 0 4px;">90分</label><input type="number" id="newGokumon90" placeholder="12000"></div>
-        <div><label style="margin:0 0 4px;">120分</label><input type="number" id="newGokumon120" placeholder="16000"></div>
-      </div>
-      <label>極門 本指名バック（円）</label>
-      <div class="row2">
-        <div><label style="margin:0 0 4px;">60分</label><input type="number" id="newGokumonHonshimei60" placeholder="500"></div>
-        <div><label style="margin:0 0 4px;">90分</label><input type="number" id="newGokumonHonshimei90" placeholder="1000"></div>
-      </div>
-    </div>
+    <!-- キューティ・極門はコースと分数がサクラと違うので、お店ごとの表で入れる（中身は otherBackFieldsHtml が作る） -->
+    <div id="cutieBackFields" class="store-back-fields" style="display:none;"></div>
+    <div id="gokumonBackFields" class="store-back-fields" style="display:none;"></div>
 
     <button class="btn" id="createBtn" onclick="createRoom()">ルームを作成</button>
 
@@ -998,6 +974,107 @@
     if(btnEl) btnEl.classList.add('selected');
   }
 
+  /* ============================================================
+     キューティ・極門のバック（2026/10）
+     コースと分数がサクラと違うので、お店ごとに「よく使うコース × 通常／本指」の表で入れる。
+     金額は記録簿（新記録簿2026年10月）のバック表から。ランクを押すと自動で入り、手で直せる。
+     保存する形：{ rank: 'A', courses: { '80': { n: '11000', h: '12000' }, … } }
+     ============================================================ */
+  var OTHER_BACKS = {
+    cutie: {
+      label: 'キューティキューティ',
+      courses: [ { key: '80', label: '80分' }, { key: '100', label: '100分' }, { key: '120', label: '120分' } ],
+      // NH（指名料+3,000円）で取ったときの上乗せは、表には入れず説明文で伝える
+      // B・C ランクを選んだときだけ +1,000円 になる
+      note: function(rank){
+        return '※指名料通常より+3,000円でお客様よりいただいた場合、バック' + ((rank === 'B' || rank === 'C') ? '+1,000円' : '+2,000円') + '。';
+      },
+      // [通常, 本指] の順（S・S★ は記録簿の「+NH指名」から NH 分の 2,000円を引いた額）
+      ranks: {
+        'S':   { '80': [12000, 13000], '100': [15000, 16000], '120': [18000, 19000] },
+        'S★':  { '80': [12000, 14000], '100': [15000, 17000], '120': [18000, 20000] },
+        'A':         { '80': [11000, 12000], '100': [13000, 14000], '120': [16000, 17000] },
+        'A★★':       { '80': [11000, 16000], '100': [13000, 18000], '120': [16000, 21000] },
+        'B':         { '80': [10000, 11000], '100': [12000, 13000], '120': [14000, 15000] },
+        'C':         { '80': [9000, 10000],  '100': [10000, 11000], '120': [12000, 13000] }
+      }
+    },
+    gokumon: {
+      label: '極門',
+      courses: [
+        { key: '入門80', label: '入門 80分' }, { key: '入門100', label: '入門 100分' },
+        { key: '極100', label: '極 100分' }, { key: '極120', label: '極 120分' },
+        { key: '悶絶80', label: '悶絶 80分' }, { key: '悶絶100', label: '悶絶 100分' },
+        { key: '潮吹き80', label: '潮吹き 80分' }, { key: '潮吹き100', label: '潮吹き 100分' },
+        { key: 'ヘルス60', label: 'ヘルス 60分' }, { key: 'ヘルス90', label: 'ヘルス 90分' }
+      ],
+      ranks: {
+        'S':  { '入門80': [15000, 17000], '入門100': [19000, 21000], '極100': [18000, 20000], '極120': [22000, 24000], '悶絶80': [15000, 17000], '悶絶100': [17000, 19000], '潮吹き80': [11000, 13000], '潮吹き100': [13000, 15000], 'ヘルス60': [11000, 13000], 'ヘルス90': [14000, 16000] },
+        'S★': { '入門80': [15000, 18000], '入門100': [19000, 22000], '極100': [18000, 21000], '極120': [22000, 25000], '悶絶80': [15000, 18000], '悶絶100': [17000, 20000], '潮吹き80': [11000, 14000], '潮吹き100': [13000, 16000], 'ヘルス60': [11000, 14000], 'ヘルス90': [14000, 17000] },
+        'A':  { '入門80': [14000, 16000], '入門100': [18000, 20000], '極100': [17000, 19000], '極120': [20000, 22000], '悶絶80': [14000, 16000], '悶絶100': [16000, 18000], '潮吹き80': [10000, 12000], '潮吹き100': [12000, 14000], 'ヘルス60': [10000, 12000], 'ヘルス90': [13000, 15000] },
+        'A★': { '入門80': [14000, 17000], '入門100': [18000, 21000], '極100': [17000, 20000], '極120': [20000, 23000], '悶絶80': [14000, 17000], '悶絶100': [16000, 19000], '潮吹き80': [10000, 13000], '潮吹き100': [12000, 15000], 'ヘルス60': [10000, 13000], 'ヘルス90': [13000, 16000] },
+        'B':  { '入門80': [13000, 15000], '入門100': [17000, 19000], '極100': [16000, 18000], '極120': [19000, 21000], '悶絶80': [13000, 15000], '悶絶100': [15000, 17000], '潮吹き80': [9000, 11000], '潮吹き100': [11000, 13000], 'ヘルス60': [9000, 11000], 'ヘルス90': [12000, 14000] },
+        'C':  { '入門80': [12000, 14000], '入門100': [15000, 17000], '極100': [15000, 17000], '極120': [18000, 20000], '悶絶80': [12000, 14000], '悶絶100': [14000, 16000], 'ヘルス60': [8000, 10000], 'ヘルス90': [11000, 13000] }
+      }
+    }
+  };
+
+  function otherBackId(prefix, store, i, kind){ return 'ob_' + prefix + '_' + store + '_' + i + '_' + kind; }
+
+  // 入力欄の HTML（values は保存されている形。空なら空欄）
+  function otherBackFieldsHtml(prefix, store, values){
+    var cfg = OTHER_BACKS[store];
+    var v = (values && values.courses) || {};
+    var html = '<label style="margin-top:0;">' + cfg.label + ' バック（円）</label>';
+    html += '<div class="rank-select-row" id="' + otherBackId(prefix, store, 'r', 'row') + '" style="flex-wrap:wrap;">';
+    Object.keys(cfg.ranks).forEach(function(r){
+      var sel = (values && values.rank === r) ? ' selected' : '';
+      html += '<button type="button" class="rank-btn' + sel + '" style="flex:0 0 auto;padding-left:10px;padding-right:10px;" ' +
+              'onclick="applyOtherRank(\'' + prefix + '\',\'' + store + '\',\'' + r + '\', this)">' + escapeHtml(r) + '</button>';
+    });
+    html += '</div>';
+    html += '<div class="rank-select-note">ランクを選ぶと下の金額欄に自動入力されます（記録簿のバック表より）。入力後の数字は手動で調整できます。</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;">';
+    html += '<tr><th style="text-align:left;font-weight:700;padding:3px 0;">コース</th><th style="font-weight:700;">通常</th><th style="font-weight:700;">本指名</th></tr>';
+    cfg.courses.forEach(function(c, i){
+      var cv = v[c.key] || {};
+      html += '<tr><td style="padding:3px 4px 3px 0;white-space:nowrap;">' + c.label + '</td>';
+      html += '<td style="padding:3px 2px;"><input type="number" style="width:100%;margin:0;" id="' + otherBackId(prefix, store, i, 'n') + '" value="' + escapeHtml(cv.n || '') + '"></td>';
+      html += '<td style="padding:3px 2px;"><input type="number" style="width:100%;margin:0;" id="' + otherBackId(prefix, store, i, 'h') + '" value="' + escapeHtml(cv.h || '') + '"></td></tr>';
+    });
+    html += '</table>';
+    if(cfg.note) html += '<div class="rank-select-note" style="margin-top:6px;" id="' + otherBackId(prefix, store, 'r', 'note') + '">' +
+                         escapeHtml(cfg.note((values && values.rank) || '')) + '</div>';
+    html += '<input type="hidden" id="' + otherBackId(prefix, store, 'r', 'val') + '" value="' + escapeHtml((values && values.rank) || '') + '">';
+    return html;
+  }
+
+  function applyOtherRank(prefix, store, rank, btnEl){
+    var cfg = OTHER_BACKS[store], p = cfg.ranks[rank];
+    if(!p) return;
+    cfg.courses.forEach(function(c, i){
+      var pair = p[c.key] || ['', ''];
+      document.getElementById(otherBackId(prefix, store, i, 'n')).value = pair[0];
+      document.getElementById(otherBackId(prefix, store, i, 'h')).value = pair[1];
+    });
+    document.getElementById(otherBackId(prefix, store, 'r', 'val')).value = rank;
+    var noteEl = document.getElementById(otherBackId(prefix, store, 'r', 'note'));
+    if(noteEl && cfg.note) noteEl.textContent = cfg.note(rank);
+    var row = document.getElementById(otherBackId(prefix, store, 'r', 'row'));
+    if(row) row.querySelectorAll('.rank-btn').forEach(function(b){ b.classList.remove('selected'); });
+    if(btnEl) btnEl.classList.add('selected');
+  }
+
+  function readOtherBack(prefix, store){
+    var cfg = OTHER_BACKS[store], courses = {};
+    cfg.courses.forEach(function(c, i){
+      var n = document.getElementById(otherBackId(prefix, store, i, 'n')).value.trim();
+      var h = document.getElementById(otherBackId(prefix, store, i, 'h')).value.trim();
+      if(n || h) courses[c.key] = { n: n, h: h };
+    });
+    return { rank: document.getElementById(otherBackId(prefix, store, 'r', 'val')).value, courses: courses };
+  }
+
   function renderStoreCheckboxes(){
     var html = '';
     var basicStores = STORE_LIST_LOCAL.filter(function(s){ return s.group === 'basic'; });
@@ -1019,6 +1096,11 @@
     });
 
     document.getElementById('storeCheckboxes').innerHTML = html;
+
+    // キューティ・極門の欄も空の状態で作り直す（チェックが入っていないので隠れている）
+    document.getElementById('cutieBackFields').innerHTML = otherBackFieldsHtml('new', 'cutie', {});
+    document.getElementById('gokumonBackFields').innerHTML = otherBackFieldsHtml('new', 'gokumon', {});
+    onStoreCheckChange();
   }
 
   function onStoreCheckChange(){
@@ -1128,20 +1210,8 @@
       stores: stores
     };
 
-    if(stores.cutie){
-      body.backCutie60 = document.getElementById('newCutie60').value.trim();
-      body.backCutie90 = document.getElementById('newCutie90').value.trim();
-      body.backCutie120 = document.getElementById('newCutie120').value.trim();
-      body.backCutieHonshimei60 = document.getElementById('newCutieHonshimei60').value.trim();
-      body.backCutieHonshimei90 = document.getElementById('newCutieHonshimei90').value.trim();
-    }
-    if(stores.gokumon){
-      body.backGokumon60 = document.getElementById('newGokumon60').value.trim();
-      body.backGokumon90 = document.getElementById('newGokumon90').value.trim();
-      body.backGokumon120 = document.getElementById('newGokumon120').value.trim();
-      body.backGokumonHonshimei60 = document.getElementById('newGokumonHonshimei60').value.trim();
-      body.backGokumonHonshimei90 = document.getElementById('newGokumonHonshimei90').value.trim();
-    }
+    if(stores.cutie) body.backCutie = readOtherBack('new', 'cutie');
+    if(stores.gokumon) body.backGokumon = readOtherBack('new', 'gokumon');
 
     var btn = document.getElementById('createBtn');
     btn.disabled = true;
@@ -1174,17 +1244,7 @@
         document.getElementById('newB120').value = '';
         document.getElementById('newBh60').value = '';
         document.getElementById('newBh90').value = '';
-        document.getElementById('newCutie60').value = '';
-        document.getElementById('newCutie90').value = '';
-        document.getElementById('newCutie120').value = '';
-        document.getElementById('newCutieHonshimei60').value = '';
-        document.getElementById('newCutieHonshimei90').value = '';
-        document.getElementById('newGokumon60').value = '';
-        document.getElementById('newGokumon90').value = '';
-        document.getElementById('newGokumon120').value = '';
-        document.getElementById('newGokumonHonshimei60').value = '';
-        document.getElementById('newGokumonHonshimei90').value = '';
-        renderStoreCheckboxes();
+        renderStoreCheckboxes();   // キューティ・極門の欄もここで空に戻る
 
         loadRooms();
       })
@@ -2016,31 +2076,11 @@
     html += '</div>';
 
     html += '<div id="editCutieFields' + idx + '" class="edit-room-store-group" style="display:' + (stores.cutie ? 'block' : 'none') + ';">';
-    html += '<label style="margin-top:0;">キューティキューティ バック（円）</label>';
-    html += '<div class="edit-room-row3">';
-    html += '<input type="number" id="editCutie60_' + idx + '" placeholder="60分" value="' + escapeHtml(backCutie.back60 || '') + '">';
-    html += '<input type="number" id="editCutie90_' + idx + '" placeholder="90分" value="' + escapeHtml(backCutie.back90 || '') + '">';
-    html += '<input type="number" id="editCutie120_' + idx + '" placeholder="120分" value="' + escapeHtml(backCutie.back120 || '') + '">';
-    html += '</div>';
-    html += '<label>本指名バック（円）</label>';
-    html += '<div class="edit-room-row2">';
-    html += '<input type="number" id="editCutieHonshimei60_' + idx + '" placeholder="60分" value="' + escapeHtml(backCutie.backHonshimei60 || '') + '">';
-    html += '<input type="number" id="editCutieHonshimei90_' + idx + '" placeholder="90分" value="' + escapeHtml(backCutie.backHonshimei90 || '') + '">';
-    html += '</div>';
+    html += otherBackFieldsHtml('edit' + idx, 'cutie', backCutie);
     html += '</div>';
 
     html += '<div id="editGokumonFields' + idx + '" class="edit-room-store-group" style="display:' + (stores.gokumon ? 'block' : 'none') + ';">';
-    html += '<label style="margin-top:0;">極門 バック（円）</label>';
-    html += '<div class="edit-room-row3">';
-    html += '<input type="number" id="editGokumon60_' + idx + '" placeholder="60分" value="' + escapeHtml(backGokumon.back60 || '') + '">';
-    html += '<input type="number" id="editGokumon90_' + idx + '" placeholder="90分" value="' + escapeHtml(backGokumon.back90 || '') + '">';
-    html += '<input type="number" id="editGokumon120_' + idx + '" placeholder="120分" value="' + escapeHtml(backGokumon.back120 || '') + '">';
-    html += '</div>';
-    html += '<label>本指名バック（円）</label>';
-    html += '<div class="edit-room-row2">';
-    html += '<input type="number" id="editGokumonHonshimei60_' + idx + '" placeholder="60分" value="' + escapeHtml(backGokumon.backHonshimei60 || '') + '">';
-    html += '<input type="number" id="editGokumonHonshimei90_' + idx + '" placeholder="90分" value="' + escapeHtml(backGokumon.backHonshimei90 || '') + '">';
-    html += '</div>';
+    html += otherBackFieldsHtml('edit' + idx, 'gokumon', backGokumon);
     html += '</div>';
 
     html += '<div class="edit-room-actions">';
@@ -2101,20 +2141,8 @@
       stores: stores
     };
 
-    if(stores.cutie){
-      body.backCutie60 = document.getElementById('editCutie60_' + idx).value.trim();
-      body.backCutie90 = document.getElementById('editCutie90_' + idx).value.trim();
-      body.backCutie120 = document.getElementById('editCutie120_' + idx).value.trim();
-      body.backCutieHonshimei60 = document.getElementById('editCutieHonshimei60_' + idx).value.trim();
-      body.backCutieHonshimei90 = document.getElementById('editCutieHonshimei90_' + idx).value.trim();
-    }
-    if(stores.gokumon){
-      body.backGokumon60 = document.getElementById('editGokumon60_' + idx).value.trim();
-      body.backGokumon90 = document.getElementById('editGokumon90_' + idx).value.trim();
-      body.backGokumon120 = document.getElementById('editGokumon120_' + idx).value.trim();
-      body.backGokumonHonshimei60 = document.getElementById('editGokumonHonshimei60_' + idx).value.trim();
-      body.backGokumonHonshimei90 = document.getElementById('editGokumonHonshimei90_' + idx).value.trim();
-    }
+    if(stores.cutie) body.backCutie = readOtherBack('edit' + idx, 'cutie');
+    if(stores.gokumon) body.backGokumon = readOtherBack('edit' + idx, 'gokumon');
 
     showLoading();
     roomFetch(GAS_URL, {
