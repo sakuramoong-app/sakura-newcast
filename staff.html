@@ -243,9 +243,10 @@
 
   .room-item{
     background:#fff;
+    border:1.5px solid #EBC9D2;   /* 一覧で境目が分かるように枠をつける */
     border-radius:14px;
     margin-bottom:10px;
-    box-shadow:0 2px 8px rgba(217,160,180,.1);
+    box-shadow:0 2px 8px rgba(217,160,180,.18);
     overflow:hidden;
   }
   .room-item.closed{ opacity:0.55; }
@@ -815,6 +816,8 @@
     }
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="room_db.js"></script>
 </head>
 <body>
 
@@ -1085,7 +1088,7 @@
     showGate('⏳ ポータルから入っています…');
     showLoading();
     // ※ 通行証は1回しか使えないので、失敗しても送り直さない
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'ssoLogin', ssoToken: sso.ssoToken, operator: sso.operator })
     })
@@ -1145,7 +1148,7 @@
     btn.textContent = '作成中...';
     showLoading();
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(body)
     })
@@ -1228,7 +1231,7 @@
 
   function loadRooms(){
     showLoading();
-    fetch(GAS_URL + '?action=listRooms&token=' + encodeURIComponent(savedToken))
+    roomFetch(GAS_URL + '?action=listRooms&token=' + encodeURIComponent(savedToken))
       .then(function(res){ return res.json(); })
       .then(function(data){
         hideLoading();
@@ -1606,7 +1609,7 @@
     }
     updateAccordionProgressCounts();
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'updateTalkChecklist', id: roomId, key: key, done: done, token: savedToken })
     })
@@ -1702,7 +1705,7 @@
       }
     }
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: true, token: savedToken })
     })
@@ -1728,7 +1731,7 @@
   }
 
   function loadRoomsQuietly(){
-    fetch(GAS_URL + '?action=listRooms&token=' + encodeURIComponent(savedToken))
+    roomFetch(GAS_URL + '?action=listRooms&token=' + encodeURIComponent(savedToken))
       .then(function(res){ return res.json(); })
       .then(function(data){
         if(data.error) return;
@@ -1844,7 +1847,7 @@
     input.disabled = true;
     showLoading();
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(body)
     })
@@ -1890,7 +1893,7 @@
       return;
     }
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'editComment', id: roomId, index: origIdx, text: text, token: savedToken })
     })
@@ -1918,7 +1921,7 @@
       return;
     }
     showLoading();
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'closeRoom', token: savedToken, id: roomId })
     })
@@ -1942,7 +1945,7 @@
       return;
     }
     showLoading();
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'deleteRoom', token: savedToken, id: roomId })
     })
@@ -2114,7 +2117,7 @@
     }
 
     showLoading();
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(body)
     })
@@ -2141,7 +2144,7 @@
     note.textContent = '保存中...';
     note.style.color = '#9C8B8F';
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'setNotice', token: savedToken, id: roomId, notice: notice })
     })
@@ -2182,14 +2185,22 @@
     return div.innerHTML;
   }
 
-  // 起動時：すでに入っていればそのまま開く／ポータルから来たら入館証をもらう／それ以外は案内だけ
+  /* 起動時（2026/10 Supabase に引っ越し）
+     ポータルと同じ場所にあるので、ポータルのログイン（20時間）をそのまま使う。
+     通行証（#portalSso=…）はもう使わない（読んだら捨てる）。 */
   (function(){
     try{ sessionStorage.removeItem(STAFF_TOKEN_STORAGE_KEY); }catch(e){}   // 以前の合言葉は使わない
-    var sso = takePortalSso();
-    var s = loadRoomSession();
-    if(s) openMainApp(s);
-    else if(sso) portalSsoLogin(sso);
-    else showGate();
+    takePortalSso();
+    RoomDB.getStaffSession().then(function(sbs){
+      if(!sbs){
+        try{ localStorage.removeItem(ROOM_SESSION_KEY); }catch(e){}
+        showGate();
+        return;
+      }
+      var s = { token: 'supabase', expiresAt: RoomDB.sessionExpiresAt(sbs) };
+      localStorage.setItem(ROOM_SESSION_KEY, JSON.stringify(s));
+      openMainApp(s);
+    });
   })();
 
   // ポータルでログインしてから20時間で自動ログアウト

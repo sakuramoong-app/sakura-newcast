@@ -697,6 +697,9 @@
     white-space:pre-wrap;
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>window.ROOM_DB_ROLE='cast';</script>
+<script src="room_db.js"></script>
 </head>
 <body>
 
@@ -806,7 +809,7 @@
   }
 
   function loadRoom(){
-    fetch(GAS_URL + '?action=getRoom&id=' + encodeURIComponent(roomId))
+    roomFetch(GAS_URL + '?action=getRoom&id=' + encodeURIComponent(roomId))
       .then(function(res){ return res.json(); })
       .then(function(data){
         if(data.error === 'not_found'){
@@ -1665,7 +1668,7 @@
     // 進捗バーも即座に更新
     updateProgressBarOnly();
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: false })
     })
@@ -1713,7 +1716,7 @@
     reader.onload = function(e){
       var base64 = e.target.result.split(',')[1];
       showLoading();
-      fetch(GAS_URL, {
+      roomFetch(GAS_URL, {
         method: 'POST',
         body: JSON.stringify({
           action: 'uploadCostume',
@@ -1747,7 +1750,7 @@
   function deleteCostumeSlot(slot){
     if(!confirm('この写真を削除しますか？')) return;
     showLoading();
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'deleteCostume', id: roomId, slot: slot })
     })
@@ -1779,7 +1782,7 @@
 
   function saveWigChoice(type, hairMake){
     showLoading();
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'setWigChoice', id: roomId, type: type, hairMake: hairMake })
     })
@@ -1810,7 +1813,7 @@
     note.textContent = '保存中...';
     note.style.color = '#9C8B8F';
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'setEmail', id: roomId, email: email })
     })
@@ -1837,7 +1840,7 @@
     note.textContent = '保存中...';
     note.style.color = '#9C8B8F';
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'setGuideRead', id: roomId })
     })
@@ -1863,7 +1866,7 @@
     note.textContent = '保存中...';
     note.style.color = '#9C8B8F';
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'setRoadmapRead', id: roomId })
     })
@@ -1892,7 +1895,7 @@
     note.textContent = '保存中...';
     note.style.color = '#9C8B8F';
 
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'setMemo', id: roomId, memo: memo })
     })
@@ -1914,7 +1917,7 @@
   }
 
   function setKit(type){
-    fetch(GAS_URL, {
+    roomFetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'setKitChoice', id: roomId, type: type })
     })
