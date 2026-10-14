@@ -32,6 +32,7 @@ const CHECKLIST_ITEMS = {
   backListFilled:  { label: '新バック一覧情報埋め込み', owner: 'staffOnly' },
   costumeApproved: { label: '撮影衣装チェック', owner: 'staffOnly' },
   studioBooked:    { label: '撮影予約+撮影詳細送信【スタジオ関連フォルダ】', owner: 'staffOnly' },
+  kamikawaShoot:   { label: '上川さんに撮影同行依頼する', owner: 'staffOnly' },
   studioDone:      { label: 'スタジオ撮影完了', owner: 'staffOnly' },
   selection:              { label: '選定', owner: 'staffOnly' },
   retouchRequested:       { label: 'レタッチ依頼', owner: 'staffOnly' },

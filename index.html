@@ -1808,7 +1808,8 @@
     showLoading();
     roomFetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'deleteCostume', id: roomId, slot: slot })
+      // 消す写真は URL で指定する（番号だけだと、すき間があるとずれるため）
+      body: JSON.stringify({ action: 'deleteCostume', id: roomId, slot: slot, url: ((currentData.costumeUrls || []).filter(function(u){ return !!u; }))[slot] || '' })
     })
       .then(function(res){ return res.json(); })
       .then(function(result){
