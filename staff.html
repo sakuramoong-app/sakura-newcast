@@ -1950,6 +1950,7 @@
     html += '</div>';
     var badgeText = meta.owner === 'cast' ? 'キャストがチェック' : (meta.owner === 'staffOnly' ? '内勤専用' : 'キャストに表示');
     if(meta.roomOnly) html += '<span class="room-check-ownerbadge" style="background:#FFF4D6;color:#a07400;">このルームだけ</span>';
+    if(meta.renamed) html += '<span class="room-check-ownerbadge" style="background:#FFF4D6;color:#a07400;">このルームだけ文章変更</span>';
     html += '<span class="room-check-ownerbadge ' + meta.owner + '">' + badgeText + '</span>';
     // 期限（つけると内勤カレンダーに予定が入る。チェックを入れるとカレンダーから消える）
     if(!isClosed){
@@ -2106,10 +2107,18 @@
   function openChecklistEditor(kind, roomId){
     var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
     var src = kind === 'cast' ? globalCastChecklistItems : globalStaffChecklistItems;
+    // このルームだけ文章を変えている項目
+    var ovr = {};
+    (room && room.extraItems || []).forEach(function(x){ if(x.owner === 'override') ovr[x.key] = x.label; });
     editCtx = {
       kind: kind, roomId: room ? roomId : '', roomName: room ? (room.castName || '（名称未設定）') : '',
-      items: src.map(function(x){ return { key: x.key, label: x.label, owner: x.owner || '', since: x.since || '' }; }),
-      roomItems: (room && room.extraItems || []).filter(function(x){ return kind === 'cast' ? x.owner !== 'staffOnly' : x.owner === 'staffOnly'; })
+      // base：いつもの文章／ovr：このルームだけの文章／label：入力欄の文章／shown：開いたときの文章（直したかどうかを見る）
+      items: src.map(function(x){
+        var o = ovr[x.key] || '';
+        return { key: x.key, base: x.label, ovr: o, label: o || x.label, shown: o || x.label, owner: x.owner || '', since: x.since || '' };
+      }),
+      asking: false, editScope: '',
+      roomItems: (room && room.extraItems || []).filter(function(x){ return x.owner !== 'override' && (kind === 'cast' ? x.owner !== 'staffOnly' : x.owner === 'staffOnly'); })
         .map(function(x){ return { key: x.key, label: x.label, owner: x.owner || '' }; }),
       addScope: room ? 'room' : 'future', addOwner: 'staffCheck'
     };
@@ -2183,6 +2192,8 @@
       html += '<button type="button" class="sm-icon-btn" onclick="moveChecklistItem(\'items\',' + i + ',1)" aria-label="下へ">↓</button>';
       html += '<button type="button" class="sm-icon-btn danger" onclick="removeChecklistItem(\'items\',' + i + ')" aria-label="消す">🗑</button>';
       if(it.since) html += '<div style="width:100%;padding-left:26px;font-size:11px;color:var(--sub);">' + shortDate(it.since) + ' より後に作ったルームにだけ出ます</div>';
+      if(it.ovr) html += '<div style="width:100%;padding-left:26px;font-size:11px;color:#a07400;">このルームだけ文章を変えています（いつもは「' + escapeHtml(it.base) + '」）'
+                       + ' <button type="button" class="sm-pill-btn" style="font-size:11px;padding:3px 9px;" onclick="revertItemLabel(' + i + ')">いつもの文章に戻す</button></div>';
       html += '</div>';
     });
     if(!c.items.length) html += '<div style="font-size:12px;color:var(--sub);margin-bottom:8px;">（ありません）</div>';
@@ -2202,11 +2213,33 @@
       if(!c.roomItems.length) html += '<div style="font-size:12px;color:var(--sub);margin-bottom:8px;">（ありません）</div>';
     }
 
-    html += '<div class="sm-modal-actions">';
-    html += '<button type="button" class="sm-btn-primary" onclick="saveStaffChecklistItems()">保存する</button>';
-    html += '<button type="button" class="sm-btn-sub" onclick="closeStaffChecklistEditor()">キャンセル</button>';
-    html += '</div></div>';
+    if(c.asking){
+      // いつもの項目の文章を直したとき：全部のルームで直すか、このルームだけか
+      var ch = changedItems();
+      html += '<div class="sm-modal-actions" style="flex-direction:column;align-items:stretch;">';
+      html += '<div style="font-size:13px;font-weight:800;">いつもの項目の文章を直しました。どちらにしますか？</div>';
+      html += '<div style="font-size:12px;color:var(--sub);line-height:1.6;max-height:90px;overflow:auto;">'
+            + ch.map(function(it){ return '「' + escapeHtml(it.shown) + '」→「' + escapeHtml(it.label.trim()) + '」'; }).join('<br>') + '</div>';
+      html += '<button type="button" class="sm-btn-primary" onclick="editCtx.editScope=\'all\';saveStaffChecklistItems()">全部のルームで直す</button>';
+      html += '<button type="button" class="sm-btn-primary" style="background:#E8B04A;" onclick="editCtx.editScope=\'room\';saveStaffChecklistItems()">このルームだけ直す（' + escapeHtml(c.roomName) + '）</button>';
+      html += '<button type="button" class="sm-btn-sub" onclick="editCtx.asking=false;renderStaffChecklistEditor()">もどる</button>';
+      html += '</div></div>';
+    } else {
+      html += '<div class="sm-modal-actions">';
+      html += '<button type="button" class="sm-btn-primary" onclick="saveStaffChecklistItems()">保存する</button>';
+      html += '<button type="button" class="sm-btn-sub" onclick="closeStaffChecklistEditor()">キャンセル</button>';
+      html += '</div></div>';
+    }
     ov.innerHTML = html;
+  }
+  // いつもの項目のうち、文章を直したもの
+  function changedItems(){
+    return editCtx.items.filter(function(it){ return it.shown != null && it.label.trim() && it.label.trim() !== it.shown; });
+  }
+  function revertItemLabel(i){
+    var it = editCtx.items[i];
+    it.ovr = ''; it.label = it.base; it.shown = it.base;
+    renderStaffChecklistEditor();
   }
   var staffDragFrom = -1;
   function staffItemDragStart(ev, i){
@@ -2249,7 +2282,7 @@
     if(c.addScope === 'room' && c.roomId){
       c.roomItems.push({ key: newItemKey('r_'), label: label, owner: owner });
     } else {
-      c.items.push({ key: newItemKey('c_'), label: label, owner: owner, since: c.addScope === 'future' ? new Date().toISOString() : '' });
+      c.items.push({ key: newItemKey('c_'), base: label, ovr: '', label: label, shown: null, owner: owner, since: c.addScope === 'future' ? new Date().toISOString() : '' });
     }
     renderStaffChecklistEditor();
     var again = document.getElementById('ckAddLabel');
@@ -2263,10 +2296,24 @@
       if(!confirm('「' + pending.value.trim() + '」はまだ追加されていません。追加してから保存しますか？')) return;
       addChecklistItem();
     }
+    // いつもの項目の文章を直していたら、全部のルームか、このルームだけかを先に聞く
+    var changed = changedItems();
+    if(changed.length && c.roomId && !c.editScope){ c.asking = true; renderStaffChecklistEditor(); return; }
+    var scope = c.editScope || 'all';
     var ok = function(x){ return x.label && x.label.trim(); };
+    var items = [], overrides = [];
+    c.items.filter(ok).forEach(function(it){
+      var isChanged = changed.indexOf(it) >= 0;
+      var lbl = it.label.trim();
+      if(it.shown == null){ items.push({ key: it.key, label: lbl, owner: it.owner, since: it.since }); return; }   // 今回追加した項目
+      if(isChanged && scope === 'all'){ items.push({ key: it.key, label: lbl, owner: it.owner, since: it.since }); return; }
+      items.push({ key: it.key, label: it.base, owner: it.owner, since: it.since });
+      var o = isChanged ? lbl : it.ovr;
+      if(o && o !== it.base) overrides.push({ key: it.key, label: o });
+    });
     showLoading();
-    roomFetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'saveChecklist', kind: c.kind, items: c.items.filter(ok),
-                                                                roomId: c.roomId, roomItems: c.roomItems.filter(ok), token: savedToken }) })
+    roomFetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'saveChecklist', kind: c.kind, items: items,
+                                                                roomId: c.roomId, roomItems: c.roomItems.filter(ok), overrides: overrides, token: savedToken }) })
       .then(function(res){ return res.json(); })
       .then(function(result){
         hideLoading();

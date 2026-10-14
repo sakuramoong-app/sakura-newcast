@@ -326,9 +326,11 @@ function defaultChecklist() {
   function buildMeta(staffList, castList, room){
     const meta = {}, ex = room ? (room.extraItems || []) : [];
     castList.forEach(x=>{ if(!room || applies(x, room.createdAt)) meta[x.key] = { label: x.label, owner: x.owner }; });
-    ex.forEach(x=>{ if(x && x.key && x.label && x.owner !== 'staffOnly') meta[x.key] = { label: x.label, owner: castOwner(x.owner), roomOnly: true }; });
+    ex.forEach(x=>{ if(x && x.key && x.label && x.owner !== 'staffOnly' && x.owner !== 'override') meta[x.key] = { label: x.label, owner: castOwner(x.owner), roomOnly: true }; });
     staffList.forEach(x=>{ if(!room || applies(x, room.createdAt)) meta[x.key] = { label: x.label, owner: 'staffOnly' }; });
     ex.forEach(x=>{ if(x && x.key && x.label && x.owner === 'staffOnly') meta[x.key] = { label: x.label, owner: 'staffOnly', roomOnly: true }; });
+    // いつもの項目の文章を、このルームだけ変えているとき
+    ex.forEach(x=>{ if(x && x.owner === 'override' && x.label && meta[x.key]) meta[x.key] = Object.assign({}, meta[x.key], { label: x.label, renamed: true }); });
     return meta;
   }
   function cleanItems(list, kind){
@@ -373,6 +375,7 @@ function defaultChecklist() {
 
     // チェック項目の並びを保存する（kind：'staff' 内勤チェック／'cast' やることリスト）
     //   items：いつもの項目（全部のルームで共通）  roomId + roomItems：そのルームだけの項目
+    //   overrides：いつもの項目の文章を、そのルームだけ変えたもの [{key, label}]
     async saveChecklist(b){
       const kind = b.kind === 'cast' ? 'cast' : 'staff';
       const items = cleanItems(b.items, kind);
@@ -380,9 +383,16 @@ function defaultChecklist() {
       if(b.roomId){
         const r = q(await sb.from('room_rooms').select('extra_items').eq('room_id', str(b.roomId)).maybeSingle());
         if(r){
-          const others = (Array.isArray(r.extra_items) ? r.extra_items : []).filter(x=> kind === 'cast' ? x.owner === 'staffOnly' : x.owner !== 'staffOnly');
+          const myKeys = {};
+          items.forEach(x=>{ myKeys[x.key] = true; });
+          // もう一方のリストの項目と、もう一方のリストの文章変更は、そのまま残す
+          const others = (Array.isArray(r.extra_items) ? r.extra_items : []).filter(x=> x.owner === 'override'
+            ? !myKeys[x.key]
+            : (kind === 'cast' ? x.owner === 'staffOnly' : x.owner !== 'staffOnly'));
           const mine = cleanItems(b.roomItems, kind).map(x=>({ key: x.key, label: x.label, owner: kind === 'cast' ? x.owner : 'staffOnly' }));
-          q(await sb.from('room_rooms').update({ extra_items: others.concat(mine) }).eq('room_id', str(b.roomId)));
+          const ov = (Array.isArray(b.overrides) ? b.overrides : []).map(x=>({ key: str(x.key).slice(0, 60), label: str(x.label).trim().slice(0, 100), owner: 'override' }))
+            .filter(x=>x.key && x.label && myKeys[x.key]);
+          q(await sb.from('room_rooms').update({ extra_items: others.concat(mine, ov) }).eq('room_id', str(b.roomId)));
         }
       }
       return { success: true };
