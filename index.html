@@ -894,7 +894,7 @@
     // 進捗バー
     var items = Object.keys(data.checklistMeta);
     var doneCount = items.filter(function(k){ return data.checklist[k] && data.checklist[k].done; }).length;
-    var pct = Math.round(doneCount / items.length * 100);
+    var pct = items.length ? Math.round(doneCount / items.length * 100) : 0;
 
     html += '<div class="section">';
     html += '<div class="section-title">準備の進み具合</div>';
@@ -1749,7 +1749,7 @@
   function updateProgressBarOnly(){
     var items = Object.keys(currentData.checklistMeta);
     var doneCount = items.filter(function(k){ return currentData.checklist[k] && currentData.checklist[k].done; }).length;
-    var pct = Math.round(doneCount / items.length * 100);
+    var pct = items.length ? Math.round(doneCount / items.length * 100) : 0;
     var fillEl = document.querySelector('.progress-fill');
     var labelEl = document.querySelector('.progress-label');
     if(fillEl) fillEl.style.width = pct + '%';

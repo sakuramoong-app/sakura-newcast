@@ -259,26 +259,28 @@ function defaultChecklist() {
       wigChoice: r.wig_choice || {}, comments: r.comments || [], email: r.email || '',
       costumeUrls: r.costume_urls || [], talkChecklist: r.talk_checklist || defaultTalkChecklist(),
       stores: r.stores || defaultStores(), backCutie: r.back_cutie || {}, backGokumon: r.back_gokumon || {},
-      notice: r.notice || ''
+      notice: r.notice || '', extraItems: Array.isArray(r.extra_items) ? r.extra_items : []
     };
   }
   const LIST_COLS = 'room_id,cast_name,back60,back90,back120,back_honshimei60,back_honshimei90,status,created_at,closed_at,' +
-                    'checklist,banner_choice,kit_choice,wig_choice,comments,email,costume_urls,talk_checklist,stores,back_cutie,back_gokumon,notice';
+                    'checklist,banner_choice,kit_choice,wig_choice,comments,email,costume_urls,talk_checklist,stores,back_cutie,back_gokumon,notice,extra_items';
 
   /* ---------- キャストの操作（ログインなし。ルームの記号で、自分のルームだけ） ---------- */
   const CAST = {
     async getRoom(p){
       const r = q(await sb.rpc('room_get', { p_id: str(p.id) }));
       if(!r || r.error) return r || { error: 'not_found' };
+      // 見せる項目は Supabase の設定から（043 を実行する前は、今までの決まった項目）
       const meta = {};
-      for(const k in CHECKLIST_ITEMS){ if(CHECKLIST_ITEMS[k].owner !== 'staffOnly') meta[k] = CHECKLIST_ITEMS[k]; }
+      if(Array.isArray(r.checklistItems)) r.checklistItems.forEach(x=>{ meta[x.key] = { label: x.label, owner: x.owner }; });
+      else for(const k in CHECKLIST_ITEMS){ if(CHECKLIST_ITEMS[k].owner !== 'staffOnly') meta[k] = CHECKLIST_ITEMS[k]; }
       r.checklistMeta = meta;
       r.storeList = STORE_LIST;
       if(!r.stores || !Object.keys(r.stores).length) r.stores = defaultStores();
       return r;
     },
     async updateChecklist(b){
-      return q(await sb.rpc('room_cast', { p_id: str(b.id), p_action: 'updateChecklist', p_data: { key: b.key, done: !!b.done } }));
+      return q(await sb.rpc('room_cast_check', { p_id: str(b.id), p_key: str(b.key), p_done: !!b.done }));
     },
     async uploadCostume(b){
       const slot = Number(b.slot);
@@ -298,22 +300,44 @@ function defaultChecklist() {
     };
   });
 
-  /* ---------- 内勤チェックの項目（画面から追加・削除できる） ----------
-     キャストにも見える項目（CHECKLIST_ITEMS の staffOnly 以外）は決まったまま。
-     内勤チェック（staffOnly）は room_settings 'staffChecklist' の並びを使う。まだ無ければ今までの項目。 */
+  /* ---------- チェック項目（画面から追加・削除・文章の編集・並べ替えできる） ----------
+     内勤チェック（staffOnly）    → room_settings 'staffChecklist' の並び
+     やることリスト（キャストに表示）→ room_settings 'castChecklist' の並び（owner：staffCheck／cast）
+     どちらも、まだ無ければ今までの項目。
+     since（足した日時）がある項目は、その後に作ったルームにだけ出る。
+     このルームだけの項目は room_rooms.extra_items。 */
   const CAST_KEYS = {};
   for(const k in CHECKLIST_ITEMS){ if(CHECKLIST_ITEMS[k].owner !== 'staffOnly') CAST_KEYS[k] = true; }
+  const castOwner = (o)=> o === 'cast' ? 'cast' : 'staffCheck';
   function staffItems(saved){
-    if(Array.isArray(saved)) return saved.filter(x=>x && x.key && x.label);
+    if(Array.isArray(saved)) return saved.filter(x=>x && x.key && x.label).map(x=>({ key: x.key, label: x.label, since: x.since || '' }));
     const out = [];
-    for(const k in CHECKLIST_ITEMS){ if(CHECKLIST_ITEMS[k].owner === 'staffOnly') out.push({ key: k, label: CHECKLIST_ITEMS[k].label }); }
+    for(const k in CHECKLIST_ITEMS){ if(CHECKLIST_ITEMS[k].owner === 'staffOnly') out.push({ key: k, label: CHECKLIST_ITEMS[k].label, since: '' }); }
     return out;
   }
-  function buildMeta(items){
-    const meta = {};
-    items.forEach(x=>{ meta[x.key] = { label: x.label, owner: 'staffOnly' }; });
-    for(const k in CAST_KEYS) meta[k] = CHECKLIST_ITEMS[k];
+  function castItems(saved){
+    if(Array.isArray(saved)) return saved.filter(x=>x && x.key && x.label).map(x=>({ key: x.key, label: x.label, owner: castOwner(x.owner), since: x.since || '' }));
+    const out = [];
+    for(const k in CAST_KEYS) out.push({ key: k, label: CHECKLIST_ITEMS[k].label, owner: castOwner(CHECKLIST_ITEMS[k].owner), since: '' });
+    return out;
+  }
+  // since のある項目は、その後に作ったルームにだけ出す
+  const applies = (x, createdAt)=> !x.since || !createdAt || new Date(createdAt) >= new Date(x.since);
+  function buildMeta(staffList, castList, room){
+    const meta = {}, ex = room ? (room.extraItems || []) : [];
+    castList.forEach(x=>{ if(!room || applies(x, room.createdAt)) meta[x.key] = { label: x.label, owner: x.owner }; });
+    ex.forEach(x=>{ if(x && x.key && x.label && x.owner !== 'staffOnly') meta[x.key] = { label: x.label, owner: castOwner(x.owner), roomOnly: true }; });
+    staffList.forEach(x=>{ if(!room || applies(x, room.createdAt)) meta[x.key] = { label: x.label, owner: 'staffOnly' }; });
+    ex.forEach(x=>{ if(x && x.key && x.label && x.owner === 'staffOnly') meta[x.key] = { label: x.label, owner: 'staffOnly', roomOnly: true }; });
     return meta;
+  }
+  function cleanItems(list, kind){
+    return (Array.isArray(list) ? list : []).map(x=>{
+      const o = { key: str(x.key).slice(0, 60), label: str(x.label).trim().slice(0, 100) };
+      if(kind === 'cast') o.owner = castOwner(x.owner);
+      if(x.since) o.since = iso(x.since);
+      return o;
+    }).filter(x=>x.key && x.label);
   }
 
   /* ---------- 内勤の操作 ---------- */
@@ -322,26 +346,38 @@ function defaultChecklist() {
 
     async listRooms(){
       const rows = [];
-      const setting = sb.from('room_settings').select('value').eq('key', 'staffChecklist').maybeSingle();
+      const setting = sb.from('room_settings').select('key,value').in('key', ['staffChecklist', 'castChecklist']);
       for(let from = 0; ; from += 1000){
         const part = q(await sb.from('room_rooms').select(LIST_COLS).order('created_at', { ascending: false }).range(from, from + 999));
         rows.push.apply(rows, part || []);
         if(!part || part.length < 1000) break;
       }
       // 設定の表がまだ無いとき（031 を実行する前）も、今までの項目で開けるようにする
-      let s = null;
-      try{ s = q(await setting); }catch(e){ s = null; }
-      const items = staffItems(s && s.value);
-      return { rooms: rows.map(roomOut), checklistMeta: buildMeta(items), staffChecklistItems: items,
+      let s = [];
+      try{ s = q(await setting) || []; }catch(e){ s = []; }
+      const val = (k)=>{ const x = s.find(y=>y.key === k); return x ? x.value : null; };
+      const items = staffItems(val('staffChecklist')), cItems = castItems(val('castChecklist'));
+      const rooms = rows.map(roomOut);
+      rooms.forEach(r=>{ r.checklistMeta = buildMeta(items, cItems, r); });
+      return { rooms, checklistMeta: buildMeta(items, cItems), staffChecklistItems: items, castChecklistItems: cItems,
                talkChecklistMeta: TALK_CHECKLIST_ITEMS, storeList: STORE_LIST };
     },
 
-    // 内勤チェック（キャストに見えない項目）の並びを保存する。全部のルームで共通
-    async saveStaffChecklist(b){
-      const items = (Array.isArray(b.items) ? b.items : []).map(x=>({ key: str(x.key).slice(0, 60), label: str(x.label).trim().slice(0, 100) }))
-        .filter(x=>x.key && x.label && !CAST_KEYS[x.key]);
-      q(await sb.from('room_settings').upsert({ key: 'staffChecklist', value: items }));
-      return { success: true, staffChecklistItems: items, checklistMeta: buildMeta(items) };
+    // チェック項目の並びを保存する（kind：'staff' 内勤チェック／'cast' やることリスト）
+    //   items：いつもの項目（全部のルームで共通）  roomId + roomItems：そのルームだけの項目
+    async saveChecklist(b){
+      const kind = b.kind === 'cast' ? 'cast' : 'staff';
+      const items = cleanItems(b.items, kind);
+      q(await sb.from('room_settings').upsert({ key: kind === 'cast' ? 'castChecklist' : 'staffChecklist', value: items }));
+      if(b.roomId){
+        const r = q(await sb.from('room_rooms').select('extra_items').eq('room_id', str(b.roomId)).maybeSingle());
+        if(r){
+          const others = (Array.isArray(r.extra_items) ? r.extra_items : []).filter(x=> kind === 'cast' ? x.owner === 'staffOnly' : x.owner !== 'staffOnly');
+          const mine = cleanItems(b.roomItems, kind).map(x=>({ key: x.key, label: x.label, owner: kind === 'cast' ? x.owner : 'staffOnly' }));
+          q(await sb.from('room_rooms').update({ extra_items: others.concat(mine) }).eq('room_id', str(b.roomId)));
+        }
+      }
+      return { success: true };
     },
 
     async setDue(b){

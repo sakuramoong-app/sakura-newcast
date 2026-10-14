@@ -1381,6 +1381,8 @@
   var globalTalkChecklistMeta = {};
   var globalStoreList = [];
   var lastRoomsData = [];
+  // そのルームに出すチェック項目（ルームごとに違うことがある：このルームだけの項目・これから作るルームだけの項目）
+  function rmeta(room){ return (room && room.checklistMeta) || globalChecklistMeta; }
 
   function loadRooms(){
     showLoading();
@@ -1398,6 +1400,7 @@
         }
         globalChecklistMeta = data.checklistMeta || {};
         globalStaffChecklistItems = data.staffChecklistItems || [];
+        globalCastChecklistItems = data.castChecklistItems || [];
         globalTalkChecklistMeta = data.talkChecklistMeta || {};
         globalStoreList = data.storeList || [];
         lastRoomsData = data.rooms || [];
@@ -1492,14 +1495,16 @@
       var url = baseUrl + '?id=' + room.roomId;
       var checklist = room.checklist || {};
       var talkChecklist = room.talkChecklist || {};
+      var M = rmeta(room);
+      metaKeys = Object.keys(M);
 
       var doneCount = metaKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
       var pct = metaKeys.length ? Math.round(doneCount / metaKeys.length * 100) : 0;
 
       var talkDoneCount = talkKeys.filter(function(k){ return talkChecklist[k] && talkChecklist[k].done; }).length;
 
-      var castKeys = metaKeys.filter(function(k){ return globalChecklistMeta[k].owner !== 'staffOnly'; });
-      var staffOnlyKeys = metaKeys.filter(function(k){ return globalChecklistMeta[k].owner === 'staffOnly'; });
+      var castKeys = metaKeys.filter(function(k){ return M[k].owner !== 'staffOnly'; });
+      var staffOnlyKeys = metaKeys.filter(function(k){ return M[k].owner === 'staffOnly'; });
       var castDoneCount = castKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
       var staffOnlyDoneCount = staffOnlyKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
 
@@ -1605,9 +1610,10 @@
 
       // アコーディオン2：やることリスト（キャストにも表示）
       html += renderAccordion('cast' + idx, '✅ やることリスト（キャストにも表示）', castDoneCount, castKeys.length, (function(){
-        var inner = '';
+        var inner = '<div style="text-align:right;margin-bottom:6px;"><button type="button" onclick="openChecklistEditor(\'cast\',\'' + room.roomId + '\')" '
+                  + 'class="sm-pill-btn">⚙️ 項目の追加・削除・編集</button></div>';
         castKeys.forEach(function(key){
-          var meta = globalChecklistMeta[key];
+          var meta = M[key];
           var state = checklist[key] || { done: false };
           inner += renderRoomCheckItem(room.roomId, key, meta, state, isClosed);
         });
@@ -1616,10 +1622,10 @@
 
       // アコーディオン3：内勤チェック（キャストには見えません）
       html += renderAccordion('staffonly' + idx, '🔒 内勤チェック（キャストには見えません）', staffOnlyDoneCount, staffOnlyKeys.length, (function(){
-        var inner = '<div style="text-align:right;margin-bottom:6px;"><button type="button" onclick="openStaffChecklistEditor()" '
-                  + 'class="sm-pill-btn">⚙️ 項目を追加・削除</button></div>';
+        var inner = '<div style="text-align:right;margin-bottom:6px;"><button type="button" onclick="openChecklistEditor(\'staff\',\'' + room.roomId + '\')" '
+                  + 'class="sm-pill-btn">⚙️ 項目の追加・削除・編集</button></div>';
         staffOnlyKeys.forEach(function(key){
-          var meta = globalChecklistMeta[key];
+          var meta = M[key];
           var state = checklist[key] || { done: false };
           inner += renderRoomCheckItem(room.roomId, key, meta, state, isClosed);
         });
@@ -1860,11 +1866,11 @@
   function updateAccordionProgressCounts(){
     // 全件再取得はせず、既にローカルにある lastRoomsData から進捗を再計算し、
     // 該当する数字・バーの表示だけをその場で書き換える（軽量・高速）。
-    var metaKeys = Object.keys(globalChecklistMeta);
-    var castKeys = metaKeys.filter(function(k){ return globalChecklistMeta[k].owner !== 'staffOnly'; });
-    var staffOnlyKeys = metaKeys.filter(function(k){ return globalChecklistMeta[k].owner === 'staffOnly'; });
-
     lastRoomsData.forEach(function(room, idx){
+      var M = rmeta(room);
+      var metaKeys = Object.keys(M);
+      var castKeys = metaKeys.filter(function(k){ return M[k].owner !== 'staffOnly'; });
+      var staffOnlyKeys = metaKeys.filter(function(k){ return M[k].owner === 'staffOnly'; });
       var checklist = room.checklist || {};
       var doneCount = metaKeys.filter(function(k){ return checklist[k] && checklist[k].done; }).length;
       var pct = metaKeys.length ? Math.round(doneCount / metaKeys.length * 100) : 0;
@@ -1920,7 +1926,8 @@
     // チェックした日付
     if(state.done && state.at) html += '<span class="ck-date" style="font-size:11px;color:var(--mint);font-weight:700;margin-left:6px;">✓ ' + shortDate(state.at) + '</span>';
     html += '</div>';
-    var badgeText = meta.owner === 'cast' ? 'キャスト回答' : (meta.owner === 'staffOnly' ? '内勤専用' : 'キャストに表示');
+    var badgeText = meta.owner === 'cast' ? 'キャストがチェック' : (meta.owner === 'staffOnly' ? '内勤専用' : 'キャストに表示');
+    if(meta.roomOnly) html += '<span class="room-check-ownerbadge" style="background:#FFF4D6;color:#a07400;">このルームだけ</span>';
     html += '<span class="room-check-ownerbadge ' + meta.owner + '">' + badgeText + '</span>';
     // 期限（つけると内勤カレンダーに予定が入る。チェックを入れるとカレンダーから消える）
     if(!isClosed){
@@ -1952,7 +1959,7 @@
   function openDueModal(roomId, key){
     var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
     if(!room) return;
-    var meta = globalChecklistMeta[key] || {};
+    var meta = rmeta(room)[key] || {};
     var st = (room.checklist || {})[key] || {};
     var ev = st.event || {};
     dueCtx = { roomId: roomId, key: key, label: meta.label || key, members: (ev.members || []).slice() };
@@ -2064,12 +2071,26 @@
       .catch(function(){ hideLoading(); alert('通信エラーが発生しました'); });
   }
 
-  /* ---------- 内勤チェックの項目を追加・削除・並べ替え（全部のルームで共通） ---------- */
+  /* ---------- チェック項目の追加・削除・文章の編集・並べ替え ----------
+     kind：'staff'（🔒 内勤チェック）／'cast'（✅ やることリスト・キャストにも表示）
+     いつもの項目（全部のルームで共通）と、開いたルームだけの項目を、まとめて編集する。
+     文章を直すと、その項目が出ている全部のルームで直る。 */
   var globalStaffChecklistItems = [];
-  var editingStaffItems = [];
+  var globalCastChecklistItems = [];
+  var editCtx = null;   // { kind, roomId, roomName, items: [], roomItems: [] }
 
-  function openStaffChecklistEditor(){
-    editingStaffItems = globalStaffChecklistItems.map(function(x){ return { key: x.key, label: x.label }; });
+  function newItemKey(pre){ return pre + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  function openChecklistEditor(kind, roomId){
+    var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
+    var src = kind === 'cast' ? globalCastChecklistItems : globalStaffChecklistItems;
+    editCtx = {
+      kind: kind, roomId: room ? roomId : '', roomName: room ? (room.castName || '（名称未設定）') : '',
+      items: src.map(function(x){ return { key: x.key, label: x.label, owner: x.owner || '', since: x.since || '' }; }),
+      roomItems: (room && room.extraItems || []).filter(function(x){ return kind === 'cast' ? x.owner !== 'staffOnly' : x.owner === 'staffOnly'; })
+        .map(function(x){ return { key: x.key, label: x.label, owner: x.owner || '' }; }),
+      addScope: room ? 'room' : 'future', addOwner: 'staffCheck'
+    };
     var ov = document.getElementById('staffChecklistEditor');
     if(!ov){
       ov = document.createElement('div');
@@ -2088,24 +2109,77 @@
     var ov = document.getElementById('staffChecklistEditor');
     if(ov) ov.classList.remove('show');
   }
+  // やることリストの「チェックする人」
+  function ownerSelect(list, i, owner){
+    return '<select class="sm-select" style="flex:0 0 auto;font-size:11.5px;padding:6px 8px;" onchange="editCtx.' + list + '[' + i + '].owner=this.value">'
+         + '<option value="staffCheck"' + (owner !== 'cast' ? ' selected' : '') + '>内勤がチェック</option>'
+         + '<option value="cast"' + (owner === 'cast' ? ' selected' : '') + '>キャストがチェック</option></select>';
+  }
   function renderStaffChecklistEditor(){
     var ov = document.getElementById('staffChecklistEditor');
+    var c = editCtx, isCast = c.kind === 'cast';
     var html = '<div class="sm-modal-card">';
     html += '<button type="button" class="sm-modal-x" onclick="closeStaffChecklistEditor()" aria-label="閉じる">×</button>';
-    html += '<div class="sm-modal-title">🔒 内勤チェックの項目</div>';
-    html += '<div class="sm-modal-note">全部のルームで共通です。消しても、今までのチェックの記録は残ります（同じ項目を追加し直すと戻ります）。<br>⠿ をつかんで上下に動かすと並べ替えできます（スマホは ↑↓）。</div>';
-    editingStaffItems.forEach(function(it, i){
+    html += '<div class="sm-modal-title">' + (isCast ? '✅ やることリスト（キャストにも表示）の項目' : '🔒 内勤チェックの項目') + '</div>';
+
+    // ---- 追加（いちばん上） ----
+    html += '<div style="background:var(--pink-soft);border-radius:14px;padding:10px 12px;margin-bottom:12px;">';
+    html += '<div style="font-size:12.5px;font-weight:800;color:#c9556a;margin-bottom:6px;">＋ 項目を追加</div>';
+    html += '<div style="display:flex;gap:6px;"><input type="text" id="ckAddLabel" maxlength="100" placeholder="追加する項目の文章" style="flex:1;padding:8px 12px;font-size:13px;" '
+          + 'onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();addChecklistItem();}">'
+          + '<button type="button" class="sm-btn-primary" style="flex:0 0 auto;padding:8px 16px;font-size:13px;" onclick="addChecklistItem()">追加</button></div>';
+    var scopes = [];
+    if(c.roomId) scopes.push(['room', 'このルームだけ（' + escapeHtml(c.roomName) + '）']);
+    scopes.push(['future', 'これから作るルームに（いつもの項目）']);
+    scopes.push(['all', '今あるルーム全部にも（いつもの項目）']);
+    html += '<div style="display:flex;flex-direction:column;gap:3px;margin-top:8px;">';
+    scopes.forEach(function(s){
+      html += '<label style="font-size:12.5px;font-weight:700;cursor:pointer;"><input type="radio" name="ckAddScope" value="' + s[0] + '"'
+            + (c.addScope === s[0] ? ' checked' : '') + ' onchange="editCtx.addScope=this.value"> ' + s[1] + '</label>';
+    });
+    html += '</div>';
+    if(isCast){
+      html += '<div style="margin-top:6px;font-size:12.5px;font-weight:700;">チェックする人 '
+            + '<select class="sm-select" onchange="editCtx.addOwner=this.value">'
+            + '<option value="staffCheck"' + (c.addOwner !== 'cast' ? ' selected' : '') + '>内勤がチェック（キャストは見るだけ）</option>'
+            + '<option value="cast"' + (c.addOwner === 'cast' ? ' selected' : '') + '>キャストが自分でチェック</option></select></div>';
+    }
+    html += '</div>';
+
+    html += '<div class="sm-modal-note">文章を直すと、その項目が出ている<b>全部のルーム</b>で直ります。消しても、今までのチェックの記録は残ります。<br>⠿ をつかんで上下に動かすと並べ替えできます（スマホは ↑↓）。</div>';
+
+    // ---- いつもの項目 ----
+    html += '<div style="font-size:12.5px;font-weight:800;margin:4px 0 6px;">いつもの項目（全部のルームで共通）</div>';
+    c.items.forEach(function(it, i){
       // ⠿ を押しているあいだだけ、行ごとドラッグできる（入力欄の文字選びのじゃまをしないため）
-      html += '<div class="sm-item-row" ondragstart="staffItemDragStart(event,' + i + ')" ondragover="staffItemDragOver(event)"'
+      html += '<div class="sm-item-row" style="flex-wrap:wrap;" ondragstart="staffItemDragStart(event,' + i + ')" ondragover="staffItemDragOver(event)"'
             + ' ondragleave="this.classList.remove(\'over\')" ondrop="staffItemDrop(event,' + i + ')" ondragend="this.draggable=false">';
       html += '<span class="sm-grip" title="つかんで並べ替え" onmousedown="this.parentNode.draggable=true" onmouseup="this.parentNode.draggable=false">⠿</span>';
-      html += '<input type="text" value="' + escapeHtml(it.label) + '" maxlength="100" oninput="editingStaffItems[' + i + '].label=this.value">';
-      html += '<button type="button" class="sm-icon-btn" onclick="moveStaffItem(' + i + ',-1)" aria-label="上へ">↑</button>';
-      html += '<button type="button" class="sm-icon-btn" onclick="moveStaffItem(' + i + ',1)" aria-label="下へ">↓</button>';
-      html += '<button type="button" class="sm-icon-btn danger" onclick="removeStaffItem(' + i + ')" aria-label="消す">🗑</button>';
+      html += '<input type="text" value="' + escapeHtml(it.label) + '" maxlength="100" oninput="editCtx.items[' + i + '].label=this.value">';
+      if(isCast) html += ownerSelect('items', i, it.owner);
+      html += '<button type="button" class="sm-icon-btn" onclick="moveChecklistItem(\'items\',' + i + ',-1)" aria-label="上へ">↑</button>';
+      html += '<button type="button" class="sm-icon-btn" onclick="moveChecklistItem(\'items\',' + i + ',1)" aria-label="下へ">↓</button>';
+      html += '<button type="button" class="sm-icon-btn danger" onclick="removeChecklistItem(\'items\',' + i + ')" aria-label="消す">🗑</button>';
+      if(it.since) html += '<div style="width:100%;padding-left:26px;font-size:11px;color:var(--sub);">' + shortDate(it.since) + ' より後に作ったルームにだけ出ます</div>';
       html += '</div>';
     });
-    html += '<button type="button" class="sm-add-btn" onclick="addStaffItem()">＋ 項目を追加</button>';
+    if(!c.items.length) html += '<div style="font-size:12px;color:var(--sub);margin-bottom:8px;">（ありません）</div>';
+
+    // ---- このルームだけの項目 ----
+    if(c.roomId){
+      html += '<div style="font-size:12.5px;font-weight:800;margin:14px 0 6px;">このルームだけの項目（' + escapeHtml(c.roomName) + '）</div>';
+      c.roomItems.forEach(function(it, i){
+        html += '<div class="sm-item-row">';
+        html += '<input type="text" value="' + escapeHtml(it.label) + '" maxlength="100" oninput="editCtx.roomItems[' + i + '].label=this.value">';
+        if(isCast) html += ownerSelect('roomItems', i, it.owner);
+        html += '<button type="button" class="sm-icon-btn" onclick="moveChecklistItem(\'roomItems\',' + i + ',-1)" aria-label="上へ">↑</button>';
+        html += '<button type="button" class="sm-icon-btn" onclick="moveChecklistItem(\'roomItems\',' + i + ',1)" aria-label="下へ">↓</button>';
+        html += '<button type="button" class="sm-icon-btn danger" onclick="removeChecklistItem(\'roomItems\',' + i + ')" aria-label="消す">🗑</button>';
+        html += '</div>';
+      });
+      if(!c.roomItems.length) html += '<div style="font-size:12px;color:var(--sub);margin-bottom:8px;">（ありません）</div>';
+    }
+
     html += '<div class="sm-modal-actions">';
     html += '<button type="button" class="sm-btn-primary" onclick="saveStaffChecklistItems()">保存する</button>';
     html += '<button type="button" class="sm-btn-sub" onclick="closeStaffChecklistEditor()">キャンセル</button>';
@@ -2126,32 +2200,51 @@
     var from = staffDragFrom;
     staffDragFrom = -1;
     if(from < 0 || from === to) { renderStaffChecklistEditor(); return; }
-    var it = editingStaffItems.splice(from, 1)[0];
-    editingStaffItems.splice(to, 0, it);
+    var it = editCtx.items.splice(from, 1)[0];
+    editCtx.items.splice(to, 0, it);
     renderStaffChecklistEditor();
   }
 
-  function moveStaffItem(i, d){
-    var j = i + d;
-    if(j < 0 || j >= editingStaffItems.length) return;
-    var t = editingStaffItems[i]; editingStaffItems[i] = editingStaffItems[j]; editingStaffItems[j] = t;
+  function moveChecklistItem(list, i, d){
+    var a = editCtx[list], j = i + d;
+    if(j < 0 || j >= a.length) return;
+    var t = a[i]; a[i] = a[j]; a[j] = t;
     renderStaffChecklistEditor();
   }
-  function removeStaffItem(i){
-    if(!confirm('「' + editingStaffItems[i].label + '」を消しますか？')) return;
-    editingStaffItems.splice(i, 1);
+  function removeChecklistItem(list, i){
+    var it = editCtx[list][i];
+    var where = list === 'roomItems' ? 'このルームから' : '全部のルームから';
+    if(!confirm('「' + it.label + '」を' + where + '消しますか？（「保存する」を押すと消えます）')) return;
+    editCtx[list].splice(i, 1);
     renderStaffChecklistEditor();
   }
-  function addStaffItem(){
-    var label = prompt('追加する項目の名前');
-    if(!label || !label.trim()) return;
-    editingStaffItems.push({ key: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), label: label.trim() });
+  function addChecklistItem(){
+    var el = document.getElementById('ckAddLabel');
+    var label = el ? el.value.trim() : '';
+    if(!label){ alert('追加する項目の文章を入れてください'); if(el) el.focus(); return; }
+    var c = editCtx;
+    var owner = c.kind === 'cast' ? c.addOwner : 'staffOnly';
+    if(c.addScope === 'room' && c.roomId){
+      c.roomItems.push({ key: newItemKey('r_'), label: label, owner: owner });
+    } else {
+      c.items.push({ key: newItemKey('c_'), label: label, owner: owner, since: c.addScope === 'future' ? new Date().toISOString() : '' });
+    }
     renderStaffChecklistEditor();
+    var again = document.getElementById('ckAddLabel');
+    if(again) again.focus();
   }
   function saveStaffChecklistItems(){
-    var items = editingStaffItems.filter(function(x){ return x.label && x.label.trim(); });
+    var c = editCtx;
+    // 追加の欄に書いたまま「保存する」を押したときは、追加してから保存する
+    var pending = document.getElementById('ckAddLabel');
+    if(pending && pending.value.trim()){
+      if(!confirm('「' + pending.value.trim() + '」はまだ追加されていません。追加してから保存しますか？')) return;
+      addChecklistItem();
+    }
+    var ok = function(x){ return x.label && x.label.trim(); };
     showLoading();
-    roomFetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'saveStaffChecklist', items: items, token: savedToken }) })
+    roomFetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'saveChecklist', kind: c.kind, items: c.items.filter(ok),
+                                                                roomId: c.roomId, roomItems: c.roomItems.filter(ok), token: savedToken }) })
       .then(function(res){ return res.json(); })
       .then(function(result){
         hideLoading();
@@ -2161,9 +2254,9 @@
           return;
         }
         closeStaffChecklistEditor();
-        loadRooms();
+        loadRoomsQuietly();
       })
-      .catch(function(){ hideLoading(); alert('通信エラーが発生しました'); });
+      .catch(function(e){ hideLoading(); alert('保存に失敗しました：' + ((e && e.message) || '通信エラー')); });
   }
 
   /* ---------- ルームの並び替え ---------- */
@@ -2175,11 +2268,10 @@
   }
   function sortRoomIdx(list, rooms){
     var mode = getRoomSort();
-    var metaKeys = Object.keys(globalChecklistMeta);
-    function progress(r){ var c = r.checklist || {}; return metaKeys.filter(function(k){ return c[k] && c[k].done; }).length; }
+    function progress(r){ var c = r.checklist || {}; return Object.keys(rmeta(r)).filter(function(k){ return c[k] && c[k].done; }).length; }
     function nearestDue(r){
       var c = r.checklist || {}, best = '9999-99-99';
-      metaKeys.forEach(function(k){ if(c[k] && c[k].due && !c[k].done && c[k].due < best) best = c[k].due; });
+      Object.keys(rmeta(r)).forEach(function(k){ if(c[k] && c[k].due && !c[k].done && c[k].due < best) best = c[k].due; });
       return best;
     }
     return list.slice().sort(function(a, b){
@@ -2217,7 +2309,7 @@
 
     roomFetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: true, label: (globalChecklistMeta[key] || {}).label || '', token: savedToken })
+      body: JSON.stringify({ action: 'updateChecklist', id: roomId, key: key, done: done, isStaff: true, label: (rmeta(room)[key] || {}).label || '', token: savedToken })
     })
       .then(function(res){ return res.json(); })
       .then(function(result){
@@ -2260,6 +2352,7 @@
         if(data.error) return;
         globalChecklistMeta = data.checklistMeta || {};
         globalStaffChecklistItems = data.staffChecklistItems || [];
+        globalCastChecklistItems = data.castChecklistItems || [];
         globalTalkChecklistMeta = data.talkChecklistMeta || {};
         globalStoreList = data.storeList || [];
         lastRoomsData = data.rooms || [];
