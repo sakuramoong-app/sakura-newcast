@@ -346,7 +346,7 @@ function defaultChecklist() {
 
     async listRooms(){
       const rows = [];
-      const setting = sb.from('room_settings').select('key,value').in('key', ['staffChecklist', 'castChecklist']);
+      const setting = sb.from('room_settings').select('key,value').in('key', ['staffChecklist', 'castChecklist', 'roomOrder']);
       for(let from = 0; ; from += 1000){
         const part = q(await sb.from('room_rooms').select(LIST_COLS).order('created_at', { ascending: false }).range(from, from + 999));
         rows.push.apply(rows, part || []);
@@ -360,7 +360,15 @@ function defaultChecklist() {
       const rooms = rows.map(roomOut);
       rooms.forEach(r=>{ r.checklistMeta = buildMeta(items, cItems, r); });
       return { rooms, checklistMeta: buildMeta(items, cItems), staffChecklistItems: items, castChecklistItems: cItems,
-               talkChecklistMeta: TALK_CHECKLIST_ITEMS, storeList: STORE_LIST };
+               talkChecklistMeta: TALK_CHECKLIST_ITEMS, storeList: STORE_LIST,
+               roomOrder: Array.isArray(val('roomOrder')) ? val('roomOrder') : [] };
+    },
+
+    // ルーム一覧の「自分で並べた順」を保存する（内勤みんなで同じ並び）
+    async saveRoomOrder(b){
+      const order = (Array.isArray(b.order) ? b.order : []).map(x=>str(x).slice(0, 64)).filter(Boolean).slice(0, 2000);
+      q(await sb.from('room_settings').upsert({ key: 'roomOrder', value: order }));
+      return { success: true, roomOrder: order };
     },
 
     // チェック項目の並びを保存する（kind：'staff' 内勤チェック／'cast' やることリスト）
