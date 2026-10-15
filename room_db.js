@@ -323,14 +323,34 @@ function defaultChecklist() {
   }
   // since のある項目は、その後に作ったルームにだけ出す
   const applies = (x, createdAt)=> !x.since || !createdAt || new Date(createdAt) >= new Date(x.since);
+  // room.extraItems（そのルームだけの設定）の中身：
+  //   owner 'staffOnly'／'staffCheck'／'cast' … このルームだけの項目
+  //   owner 'override' … テンプレの項目の文章を、このルームだけ変えたもの
+  //   owner 'hide'     … テンプレの項目を、このルームから外したもの
+  //   owner 'order'    … このルームでの並び（kind：'cast'／'staff'、keys：[…]）
+  const ROOM_ITEM_OWNERS = { staffOnly: 1, staffCheck: 1, cast: 1 };
   function buildMeta(staffList, castList, room){
-    const meta = {}, ex = room ? (room.extraItems || []) : [];
-    castList.forEach(x=>{ if(!room || applies(x, room.createdAt)) meta[x.key] = { label: x.label, owner: x.owner }; });
-    ex.forEach(x=>{ if(x && x.key && x.label && x.owner !== 'staffOnly' && x.owner !== 'override') meta[x.key] = { label: x.label, owner: castOwner(x.owner), roomOnly: true }; });
-    staffList.forEach(x=>{ if(!room || applies(x, room.createdAt)) meta[x.key] = { label: x.label, owner: 'staffOnly' }; });
-    ex.forEach(x=>{ if(x && x.key && x.label && x.owner === 'staffOnly') meta[x.key] = { label: x.label, owner: 'staffOnly', roomOnly: true }; });
-    // いつもの項目の文章を、このルームだけ変えているとき
-    ex.forEach(x=>{ if(x && x.owner === 'override' && x.label && meta[x.key]) meta[x.key] = Object.assign({}, meta[x.key], { label: x.label, renamed: true }); });
+    const ex = room ? (room.extraItems || []).filter(x=>x && typeof x === 'object') : [];
+    const hidden = {}, order = {};
+    ex.forEach(x=>{
+      if(x.owner === 'hide') hidden[x.key] = true;
+      if(x.owner === 'order' && Array.isArray(x.keys)) order[x.kind] = x.keys;
+    });
+    const cast = [], staff = [];
+    castList.forEach(x=>{ if(!room || applies(x, room.createdAt)) cast.push([x.key, { label: x.label, owner: x.owner }]); });
+    ex.forEach(x=>{ if(x.key && x.label && (x.owner === 'staffCheck' || x.owner === 'cast')) cast.push([x.key, { label: x.label, owner: x.owner, roomOnly: true }]); });
+    staffList.forEach(x=>{ if(!room || applies(x, room.createdAt)) staff.push([x.key, { label: x.label, owner: 'staffOnly' }]); });
+    ex.forEach(x=>{ if(x.key && x.label && x.owner === 'staffOnly') staff.push([x.key, { label: x.label, owner: 'staffOnly', roomOnly: true }]); });
+    // このルームでの並び（並びにない項目は、テンプレの順で後ろに）
+    const sortBy = (arr, keys)=>{
+      if(!keys) return arr;
+      const p = {}; keys.forEach((k, i)=>{ p[k] = i; });
+      return arr.map((e, i)=>[e, (e[0] in p) ? p[e[0]] : 100000 + i]).sort((a, b)=>a[1] - b[1]).map(x=>x[0]);
+    };
+    const meta = {};
+    sortBy(cast, order.cast).concat(sortBy(staff, order.staff)).forEach(e=>{ if(!hidden[e[0]]) meta[e[0]] = e[1]; });
+    // テンプレの項目の文章を、このルームだけ変えているとき
+    ex.forEach(x=>{ if(x.owner === 'override' && x.label && meta[x.key]) meta[x.key] = Object.assign({}, meta[x.key], { label: x.label, renamed: true }); });
     return meta;
   }
   function cleanItems(list, kind){
@@ -388,13 +408,47 @@ function defaultChecklist() {
           // もう一方のリストの項目と、もう一方のリストの文章変更は、そのまま残す
           const others = (Array.isArray(r.extra_items) ? r.extra_items : []).filter(x=> x.owner === 'override'
             ? !myKeys[x.key]
-            : (kind === 'cast' ? x.owner === 'staffOnly' : x.owner !== 'staffOnly'));
+            : (!ROOM_ITEM_OWNERS[x.owner] || (kind === 'cast' ? x.owner === 'staffOnly' : x.owner !== 'staffOnly')));
           const mine = cleanItems(b.roomItems, kind).map(x=>({ key: x.key, label: x.label, owner: kind === 'cast' ? x.owner : 'staffOnly' }));
           const ov = (Array.isArray(b.overrides) ? b.overrides : []).map(x=>({ key: str(x.key).slice(0, 60), label: str(x.label).trim().slice(0, 100), owner: 'override' }))
             .filter(x=>x.key && x.label && myKeys[x.key]);
           q(await sb.from('room_rooms').update({ extra_items: others.concat(mine, ov) }).eq('room_id', str(b.roomId)));
         }
       }
+      return { success: true };
+    },
+
+    // そのルームだけの編集（op：'add' 追加／'rename' 文章を変える／'remove' 外す／'order' 並び）
+    async editRoomItems(b){
+      const r = q(await sb.from('room_rooms').select('extra_items').eq('room_id', str(b.roomId)).maybeSingle());
+      if(!r) return { error: 'not_found' };
+      let ex = (Array.isArray(r.extra_items) ? r.extra_items : []).filter(x=>x && typeof x === 'object');
+      const key = str(b.key).slice(0, 60), label = str(b.label).trim().slice(0, 100);
+      const kind = b.kind === 'cast' ? 'cast' : 'staff';
+      const own = ex.find(x=>x.key === key && ROOM_ITEM_OWNERS[x.owner]);   // このルームだけの項目か
+      if(b.op === 'add'){
+        if(!label) return { error: 'empty' };
+        ex.push({ key: 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), label, owner: kind === 'cast' ? 'staffCheck' : 'staffOnly' });
+      } else if(b.op === 'rename'){
+        if(!key || !label) return { error: 'empty' };
+        if(own) own.label = label;
+        else{
+          ex = ex.filter(x=>!(x.owner === 'override' && x.key === key));
+          if(label !== str(b.base).trim()) ex.push({ key, label, owner: 'override' });   // テンプレと同じ文章に戻したら、変更の印を外す
+        }
+      } else if(b.op === 'remove'){
+        if(!key) return { error: 'empty' };
+        if(own) ex = ex.filter(x=>x !== own);
+        else{
+          ex = ex.filter(x=>!((x.owner === 'override' || x.owner === 'hide') && x.key === key));
+          ex.push({ key, label: '-', owner: 'hide' });
+        }
+      } else if(b.op === 'order'){
+        const keys = (Array.isArray(b.keys) ? b.keys : []).map(x=>str(x).slice(0, 60)).filter(Boolean).slice(0, 300);
+        ex = ex.filter(x=>!(x.owner === 'order' && x.kind === kind));
+        ex.push({ key: '_order_' + kind, label: '-', owner: 'order', kind, keys });
+      } else return { error: 'invalid_op' };
+      q(await sb.from('room_rooms').update({ extra_items: ex }).eq('room_id', str(b.roomId)));
       return { success: true };
     },
 

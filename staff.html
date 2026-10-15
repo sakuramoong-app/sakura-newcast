@@ -377,6 +377,17 @@
   .room-check-icon.clickable{ cursor:pointer; transition:transform .1s ease; }
   .room-check-icon.clickable:active{ transform:scale(0.85); }
   .room-check-label{ font-size:12.5px; flex:1; color:var(--ink); }
+  /* そのルームだけの編集（文章クリックで編集・長押しで並べ替え） */
+  .room-check-item.editable{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; border-radius:10px; }
+  .room-check-item.editable .ck-text{ cursor:text; }
+  .room-check-item.editable .ck-text:hover{ background:var(--pink-soft); border-radius:6px; }
+  .room-check-item.dragging{ background:var(--pink-soft); box-shadow:0 6px 16px rgba(229,99,140,.25); opacity:.95; }
+  .ck-edit{ width:100%; font-family:inherit; font-size:12.5px; padding:5px 8px; border:1.5px solid var(--pink); border-radius:8px; -webkit-user-select:text; user-select:text; }
+  .ck-x{ flex:0 0 auto; width:22px; height:22px; border:none; border-radius:99px; background:#F1ECEA; color:var(--sub); font-size:12px; font-weight:800; cursor:pointer; line-height:1; }
+  .ck-x:hover{ background:var(--pink-soft); color:#c9556a; }
+  .ck-add{ display:flex; gap:6px; margin-bottom:8px; }
+  .ck-add input{ flex:1; font-family:inherit; font-size:12.5px; padding:7px 10px; border:1.5px dashed var(--pink); border-radius:10px; }
+  .ck-add button{ flex:0 0 auto; border:none; border-radius:99px; padding:6px 14px; background:var(--pink); color:#fff; font-family:inherit; font-size:12px; font-weight:800; cursor:pointer; }
   .room-check-label.done{ color:var(--sub); text-decoration:line-through; text-decoration-color:#ddd; }
   .room-check-ownerbadge{
     font-size:9.5px;
@@ -1632,8 +1643,7 @@
 
       // アコーディオン2：やることリスト（キャストにも表示）
       html += renderAccordion('cast' + idx, '✅ やることリスト（キャストにも表示）', castDoneCount, castKeys.length, (function(){
-        var inner = '<div style="text-align:right;margin-bottom:6px;"><button type="button" onclick="openChecklistEditor(\'cast\',\'' + room.roomId + '\')" '
-                  + 'class="sm-pill-btn">⚙️ 項目の追加・削除・編集</button></div>';
+        var inner = roomListTools(room, idx, 'cast', isClosed);
         castKeys.forEach(function(key){
           var meta = M[key];
           var state = checklist[key] || { done: false };
@@ -1644,8 +1654,7 @@
 
       // アコーディオン3：内勤チェック（キャストには見えません）
       html += renderAccordion('staffonly' + idx, '🔒 内勤チェック（キャストには見えません）', staffOnlyDoneCount, staffOnlyKeys.length, (function(){
-        var inner = '<div style="text-align:right;margin-bottom:6px;"><button type="button" onclick="openChecklistEditor(\'staff\',\'' + room.roomId + '\')" '
-                  + 'class="sm-pill-btn">⚙️ 項目の追加・削除・編集</button></div>';
+        var inner = roomListTools(room, idx, 'staff', isClosed);
         staffOnlyKeys.forEach(function(key){
           var meta = M[key];
           var state = checklist[key] || { done: false };
@@ -1937,14 +1946,18 @@
   }
 
   function renderRoomCheckItem(roomId, key, meta, state, isClosed){
-    var html = '<div class="room-check-item" style="flex-wrap:wrap;">';
+    var kind = meta.owner === 'staffOnly' ? 'staff' : 'cast';
+    // 稼働中のルームは：文章をクリックで編集／長押しで並べ替え／× でこのルームから外す
+    var html = '<div class="room-check-item' + (isClosed ? '' : ' editable') + '" style="flex-wrap:wrap;"'
+             + (isClosed ? '' : ' data-key="' + escapeHtml(key) + '" data-kind="' + kind + '" data-room="' + roomId + '"') + '>';
     var canClick = !isClosed;
     if(canClick){
       html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + ' clickable" onclick="toggleStaffChecklist(\'' + roomId + '\',\'' + key + '\',' + (!state.done) + ', this)">' + (state.done ? '✓' : '') + '</div>';
     } else {
       html += '<div class="room-check-icon ' + (state.done ? 'done' : 'pending') + '">' + (state.done ? '✓' : '') + '</div>';
     }
-    html += '<div class="room-check-label ' + (state.done ? 'done' : '') + '">' + escapeHtml(meta.label);
+    html += '<div class="room-check-label ' + (state.done ? 'done' : '') + '"><span class="ck-text"'
+          + (isClosed ? '' : ' title="クリックで文章を編集（このルームだけ）" onclick="startEditRoomItem(this,\'' + roomId + '\',\'' + key + '\')"') + '>' + escapeHtml(meta.label) + '</span>';
     // チェックした日付
     if(state.done && state.at) html += '<span class="ck-date" style="font-size:11px;color:var(--mint);font-weight:700;margin-left:6px;">✓ ' + shortDate(state.at) + '</span>';
     html += '</div>';
@@ -1952,6 +1965,7 @@
     if(meta.roomOnly) html += '<span class="room-check-ownerbadge" style="background:#FFF4D6;color:#a07400;">このルームだけ</span>';
     if(meta.renamed) html += '<span class="room-check-ownerbadge" style="background:#FFF4D6;color:#a07400;">このルームだけ文章変更</span>';
     html += '<span class="room-check-ownerbadge ' + meta.owner + '">' + badgeText + '</span>';
+    if(!isClosed) html += '<button type="button" class="ck-x" title="このルームから外す" onclick="removeRoomItem(\'' + roomId + '\',\'' + key + '\')">×</button>';
     // 期限（つけると内勤カレンダーに予定が入る。チェックを入れるとカレンダーから消える）
     if(!isClosed){
       var due = state.due || '';
@@ -2105,7 +2119,8 @@
   function newItemKey(pre){ return pre + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
   function openChecklistEditor(kind, roomId){
-    var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
+    // この小窓はテンプレ（全部のルーム共通）だけを編集する。そのルームだけの編集は、ルームの中で直接（クリック・長押し・×）
+    var room = null;
     var src = kind === 'cast' ? globalCastChecklistItems : globalStaffChecklistItems;
     // このルームだけ文章を変えている項目
     var ovr = {};
@@ -2151,7 +2166,7 @@
     var c = editCtx, isCast = c.kind === 'cast';
     var html = '<div class="sm-modal-card">';
     html += '<button type="button" class="sm-modal-x" onclick="closeStaffChecklistEditor()" aria-label="閉じる">×</button>';
-    html += '<div class="sm-modal-title">' + (isCast ? '✅ やることリスト（キャストにも表示）の項目' : '🔒 内勤チェックの項目') + '</div>';
+    html += '<div class="sm-modal-title">' + (isCast ? '⚙️ やることリストのテンプレ（全部のルーム共通）' : '⚙️ 内勤チェックのテンプレ（全部のルーム共通）') + '</div>';
 
     // ---- 追加（いちばん上） ----
     html += '<div style="background:var(--pink-soft);border-radius:14px;padding:10px 12px;margin-bottom:12px;">';
@@ -2180,7 +2195,7 @@
     html += '<div class="sm-modal-note">文章を直すと、その項目が出ている<b>全部のルーム</b>で直ります。消しても、今までのチェックの記録は残ります。<br>⠿ をつかんで上下に動かすと並べ替えできます（スマホは ↑↓）。</div>';
 
     // ---- いつもの項目 ----
-    html += '<div style="font-size:12.5px;font-weight:800;margin:4px 0 6px;">いつもの項目（全部のルームで共通）</div>';
+    html += '<div style="font-size:12.5px;font-weight:800;margin:4px 0 6px;">テンプレの項目（全部のルームで共通）</div>';
     c.items.forEach(function(it, i){
       // ⠿ を押しているあいだだけ、行ごとドラッグできる（入力欄の文字選びのじゃまをしないため）
       html += '<div class="sm-item-row" style="flex-wrap:wrap;" ondragstart="staffItemDragStart(event,' + i + ')" ondragover="staffItemDragOver(event)"'
@@ -2327,6 +2342,141 @@
       })
       .catch(function(e){ hideLoading(); alert('保存に失敗しました：' + ((e && e.message) || '通信エラー')); });
   }
+
+  /* ---------- そのルームだけの編集（Trello のチェックリストのように） ----------
+     ・文章をクリック → その場で編集（このルームだけ）
+     ・× → このルームから外す（テンプレの項目は、このルームでだけ見えなくなる）
+     ・いちばん上の欄 → このルームだけの項目を追加
+     ・長押し → 好きな場所までドラッグして並べ替え（このルームだけ） */
+  function roomListTools(room, idx, kind, isClosed){
+    var html = '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">';
+    html += '<span style="font-size:11px;color:var(--sub);">' + (isClosed ? '' : '文章をクリックで編集・長押しで並べ替え（このルームだけ）') + '</span>';
+    html += '<button type="button" onclick="openChecklistEditor(\'' + kind + '\')" class="sm-pill-btn">⚙️ テンプレを編集（全部のルーム）</button></div>';
+    if(!isClosed){
+      var id = 'ckAdd_' + kind + '_' + idx;
+      html += '<div class="ck-add"><input type="text" id="' + id + '" maxlength="100" placeholder="＋ このルームに項目を追加" '
+            + 'onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();addRoomItem(\'' + room.roomId + '\',\'' + kind + '\',\'' + id + '\');}">'
+            + '<button type="button" onclick="addRoomItem(\'' + room.roomId + '\',\'' + kind + '\',\'' + id + '\')">追加</button></div>';
+    }
+    return html;
+  }
+  // テンプレの文章（このルームで同じ文章に戻したら、変更の印を外すため）
+  function templateLabel(key){
+    var t = globalStaffChecklistItems.concat(globalCastChecklistItems).find(function(x){ return x.key === key; });
+    return t ? t.label : '';
+  }
+  function roomItemOp(body){
+    body.action = 'editRoomItems';
+    body.token = savedToken;
+    return roomFetch(GAS_URL, { method: 'POST', body: JSON.stringify(body) })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          if(String(result.error).indexOf('unauthorized') >= 0){ handleRoomAuthError(); return; }
+          alert('保存に失敗しました：' + result.error);
+        }
+        loadRoomsQuietly();
+      })
+      .catch(function(){ alert('保存に失敗しました（通信エラー）'); loadRoomsQuietly(); });
+  }
+  function startEditRoomItem(el, roomId, key){
+    if(roomDragging) return;
+    var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
+    var meta = room && rmeta(room)[key];
+    if(!meta) return;
+    var inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'ck-edit'; inp.maxLength = 100; inp.value = meta.label;
+    el.replaceWith(inp);
+    inp.focus(); inp.select();
+    var done = false;
+    function finish(save){
+      if(done) return;
+      done = true;
+      var v = inp.value.trim();
+      if(!save || !v || v === meta.label){
+        var sp = document.createElement('span');
+        sp.className = 'ck-text'; sp.textContent = meta.label; sp.title = 'クリックで文章を編集（このルームだけ）';
+        sp.onclick = function(){ startEditRoomItem(sp, roomId, key); };
+        inp.replaceWith(sp);
+        return;
+      }
+      roomItemOp({ op: 'rename', roomId: roomId, key: key, label: v, base: templateLabel(key) });
+    }
+    inp.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' && !e.isComposing){ e.preventDefault(); finish(true); }
+      else if(e.key === 'Escape'){ finish(false); }
+    });
+    inp.addEventListener('blur', function(){ finish(true); });
+  }
+  function removeRoomItem(roomId, key){
+    var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
+    var meta = room && rmeta(room)[key];
+    if(!meta) return;
+    if(!confirm('「' + meta.label + '」をこのルームから外しますか？\n（ほかのルームとテンプレはそのままです）')) return;
+    roomItemOp({ op: 'remove', roomId: roomId, key: key });
+  }
+  function addRoomItem(roomId, kind, inputId){
+    var el = document.getElementById(inputId);
+    var v = el ? el.value.trim() : '';
+    if(!v){ if(el) el.focus(); return; }
+    roomItemOp({ op: 'add', roomId: roomId, kind: kind, label: v });
+  }
+
+  // 長押しで並べ替え（スマホは指、パソコンはマウス。0.45秒押したままにすると動かせる）
+  var roomDragging = false;
+  (function(){
+    var timer = null, row = null, sx = 0, sy = 0, justDragged = false;
+    function rowFrom(t){ return t && t.closest ? t.closest('.room-check-item.editable[data-key]') : null; }
+    function begin(x, y, target){
+      if(target.closest('input,button,select,textarea,a,.room-check-icon,.sm-due-btn')) return;
+      var r = rowFrom(target);
+      if(!r) return;
+      sx = x; sy = y;
+      clearTimeout(timer);
+      timer = setTimeout(function(){
+        row = r; roomDragging = true;
+        row.classList.add('dragging');
+        if(navigator.vibrate) try{ navigator.vibrate(20); }catch(e){}
+      }, 450);
+    }
+    function move(x, y){
+      if(!row){
+        if(timer && (Math.abs(x - sx) > 8 || Math.abs(y - sy) > 8)){ clearTimeout(timer); timer = null; }
+        return false;
+      }
+      var under = document.elementFromPoint(x, y);
+      var t = rowFrom(under);
+      if(t && t !== row && t.parentNode === row.parentNode && t.dataset.kind === row.dataset.kind){
+        var b = t.getBoundingClientRect();
+        if(y < b.top + b.height / 2) t.parentNode.insertBefore(row, t);
+        else t.parentNode.insertBefore(row, t.nextSibling);
+      }
+      return true;
+    }
+    function end(){
+      clearTimeout(timer); timer = null;
+      if(!row) return;
+      var r = row; row = null;
+      r.classList.remove('dragging');
+      justDragged = true; setTimeout(function(){ justDragged = false; roomDragging = false; }, 50);
+      var keys = Array.prototype.map.call(r.parentNode.querySelectorAll('.room-check-item.editable[data-kind="' + r.dataset.kind + '"]'), function(x){ return x.dataset.key; });
+      roomItemOp({ op: 'order', roomId: r.dataset.room, kind: r.dataset.kind, keys: keys });
+    }
+    // 指
+    document.addEventListener('touchstart', function(e){ if(e.touches.length === 1) begin(e.touches[0].clientX, e.touches[0].clientY, e.target); }, { passive: true });
+    document.addEventListener('touchmove', function(e){
+      if(move(e.touches[0].clientX, e.touches[0].clientY)) e.preventDefault();   // 並べ替え中は画面をスクロールさせない
+    }, { passive: false });
+    document.addEventListener('touchend', end);
+    document.addEventListener('touchcancel', end);
+    // マウス
+    document.addEventListener('mousedown', function(e){ if(e.button === 0) begin(e.clientX, e.clientY, e.target); });
+    document.addEventListener('mousemove', function(e){ if(move(e.clientX, e.clientY)) e.preventDefault(); });
+    document.addEventListener('mouseup', end);
+    // 長押しのメニュー・並べ替え直後のクリックは出さない
+    document.addEventListener('contextmenu', function(e){ if(rowFrom(e.target) && (row || timer)) e.preventDefault(); });
+    document.addEventListener('click', function(e){ if(justDragged && rowFrom(e.target)){ e.preventDefault(); e.stopPropagation(); } }, true);
+  })();
 
   /* ---------- ルームの並び替え ---------- */
   var globalRoomOrder = [];                       // 自分で並べた順（Supabase に保存・内勤みんな共通）
