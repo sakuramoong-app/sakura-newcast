@@ -2349,15 +2349,17 @@
      ・いちばん上の欄 → このルームだけの項目を追加
      ・長押し → 好きな場所までドラッグして並べ替え（このルームだけ） */
   function roomListTools(room, idx, kind, isClosed){
-    var html = '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">';
-    html += '<span style="font-size:11px;color:var(--sub);">' + (isClosed ? '' : '文章をクリックで編集・長押しで並べ替え（このルームだけ）') + '</span>';
-    html += '<button type="button" onclick="openChecklistEditor(\'' + kind + '\')" class="sm-pill-btn">⚙️ テンプレを編集（全部のルーム）</button></div>';
-    if(!isClosed){
-      var id = 'ckAdd_' + kind + '_' + idx;
-      html += '<div class="ck-add"><input type="text" id="' + id + '" maxlength="100" placeholder="＋ このルームに項目を追加" '
-            + 'onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();addRoomItem(\'' + room.roomId + '\',\'' + kind + '\',\'' + id + '\');}">'
-            + '<button type="button" onclick="addRoomItem(\'' + room.roomId + '\',\'' + kind + '\',\'' + id + '\')">追加</button></div>';
-    }
+    if(isClosed) return '';
+    var html = '<div style="font-size:11px;color:var(--sub);margin-bottom:6px;">文章をクリックで編集・長押しで並べ替え・× で消す</div>';
+    var id = 'ckAdd_' + kind + '_' + idx;
+    var go = 'addRoomItem(\'' + room.roomId + '\',\'' + kind + '\',\'' + id + '\')';
+    html += '<div class="ck-add" style="flex-wrap:wrap;"><input type="text" id="' + id + '" maxlength="100" placeholder="＋ 項目を追加" '
+          + 'onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();' + go + ';}">'
+          + '<select id="' + id + '_scope" class="sm-select" style="font-size:12px;padding:6px 8px;">'
+          + '<option value="room">このルームのみ</option>'
+          + '<option value="all">全体（今あるルーム全て）</option>'
+          + '<option value="future">全体（これからのルームに反映）</option></select>'
+          + '<button type="button" onclick="' + go + '">追加</button></div>';
     return html;
   }
   // テンプレの文章（このルームで同じ文章に戻したら、変更の印を外すため）
@@ -2400,7 +2402,19 @@
         inp.replaceWith(sp);
         return;
       }
-      roomItemOp({ op: 'rename', roomId: roomId, key: key, label: v, base: templateLabel(key) });
+      // このルームだけの項目は、そのまま直す。テンプレの項目は、このルームだけか全部のルームか選ぶ
+      if(meta.roomOnly){ roomItemOp({ op: 'rename', roomId: roomId, key: key, label: v, base: templateLabel(key) }); return; }
+      var kind = meta.owner === 'staffOnly' ? 'staff' : 'cast';
+      showChoiceModal('✏️ 文章を直す', '「' + escapeHtml(meta.label) + '」→「' + escapeHtml(v) + '」', [
+        { label: 'このルームだけ直す', color: '#E8B04A', run: function(){ roomItemOp({ op: 'rename', roomId: roomId, key: key, label: v, base: templateLabel(key) }); } },
+        { label: '全部のルームで直す', run: function(){
+            // テンプレの文章を直して、このルームだけの文章変更があれば外す
+            templateOp({ action: 'renameTemplateItem', kind: kind, key: key, label: v }).then(function(){
+              roomItemOp({ op: 'rename', roomId: roomId, key: key, label: v, base: v });
+            });
+          } },
+        { label: 'やめる', sub: true, run: function(){ loadRoomsQuietly(); } }
+      ]);
     }
     inp.addEventListener('keydown', function(e){
       if(e.key === 'Enter' && !e.isComposing){ e.preventDefault(); finish(true); }
@@ -2420,27 +2434,11 @@
     }
     // テンプレの項目は、このルームだけか、全部のルームか選ぶ
     var kind = meta.owner === 'staffOnly' ? 'staff' : 'cast';
-    var ov = document.getElementById('removeItemModal');
-    if(!ov){
-      ov = document.createElement('div');
-      ov.id = 'removeItemModal';
-      ov.className = 'sm-modal';
-      var downOnBackdrop = false;
-      ov.addEventListener('mousedown', function(e){ downOnBackdrop = (e.target === ov); });
-      ov.addEventListener('click', function(e){ if(e.target === ov && downOnBackdrop) ov.classList.remove('show'); });
-      document.body.appendChild(ov);
-    }
-    var close = "document.getElementById('removeItemModal').classList.remove('show')";
-    ov.innerHTML = '<div class="sm-modal-card">'
-      + '<button type="button" class="sm-modal-x" onclick="' + close + '" aria-label="閉じる">×</button>'
-      + '<div class="sm-modal-title">🗑 項目を消す</div>'
-      + '<div class="sm-modal-note">「' + escapeHtml(meta.label) + '」をどうしますか？<br>（今までのチェックの記録は残ります）</div>'
-      + '<div class="sm-modal-actions" style="flex-direction:column;align-items:stretch;">'
-      + '<button type="button" class="sm-btn-primary" style="background:#E8B04A;" onclick="' + close + ';roomItemOp({op:\'remove\',roomId:\'' + roomId + '\',key:\'' + key + '\'})">このルームだけ外す</button>'
-      + '<button type="button" class="sm-btn-primary" onclick="' + close + ';removeTemplateItem(\'' + kind + '\',\'' + key + '\')">全部のルームから消す（テンプレからも消す）</button>'
-      + '<button type="button" class="sm-btn-sub" onclick="' + close + '">やめる</button>'
-      + '</div></div>';
-    ov.classList.add('show');
+    showChoiceModal('🗑 項目を消す', '「' + escapeHtml(meta.label) + '」をどうしますか？<br>（今までのチェックの記録は残ります）', [
+      { label: 'このルームだけ外す', color: '#E8B04A', run: function(){ roomItemOp({ op: 'remove', roomId: roomId, key: key }); } },
+      { label: '全部のルームから消す', run: function(){ removeTemplateItem(kind, key); } },
+      { label: 'やめる' }
+    ]);
   }
   function removeTemplateItem(kind, key){
     roomFetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'removeTemplateItem', kind: kind, key: key, token: savedToken }) })
@@ -2458,7 +2456,53 @@
     var el = document.getElementById(inputId);
     var v = el ? el.value.trim() : '';
     if(!v){ if(el) el.focus(); return; }
-    roomItemOp({ op: 'add', roomId: roomId, kind: kind, label: v });
+    var sc = document.getElementById(inputId + '_scope');
+    var scope = sc ? sc.value : 'room';
+    if(scope === 'room'){ roomItemOp({ op: 'add', roomId: roomId, kind: kind, label: v }); return; }
+    // 全体：テンプレに足す（「これから」は、今あるルームには出ない）
+    templateOp({ action: 'addTemplateItem', kind: kind, label: v, since: scope === 'future' ? new Date().toISOString() : '' },
+      scope === 'future' ? '「' + v + '」をテンプレに足しました。これから作るルームに出ます（このルームには出ません）。' : '');
+  }
+  function templateOp(body, doneMsg){
+    body.token = savedToken;
+    return roomFetch(GAS_URL, { method: 'POST', body: JSON.stringify(body) })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          if(String(result.error).indexOf('unauthorized') >= 0){ handleRoomAuthError(); return; }
+          alert('保存に失敗しました：' + result.error);
+        } else if(doneMsg) alert(doneMsg);
+        loadRoomsQuietly();
+      })
+      .catch(function(){ alert('保存に失敗しました（通信エラー）'); loadRoomsQuietly(); });
+  }
+  // 小窓で選ぶ（buttons：[{label, color, run}]）
+  function showChoiceModal(title, note, buttons){
+    var ov = document.getElementById('removeItemModal');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'removeItemModal';
+      ov.className = 'sm-modal';
+      var downOnBackdrop = false;
+      ov.addEventListener('mousedown', function(e){ downOnBackdrop = (e.target === ov); });
+      ov.addEventListener('click', function(e){ if(e.target === ov && downOnBackdrop) ov.classList.remove('show'); });
+      document.body.appendChild(ov);
+    }
+    choiceRuns = buttons.map(function(b){ return b.run; });
+    ov.innerHTML = '<div class="sm-modal-card">'
+      + '<button type="button" class="sm-modal-x" onclick="closeChoice(-1)" aria-label="閉じる">×</button>'
+      + '<div class="sm-modal-title">' + title + '</div><div class="sm-modal-note">' + note + '</div>'
+      + '<div class="sm-modal-actions" style="flex-direction:column;align-items:stretch;">'
+      + buttons.map(function(b, i){ return '<button type="button" class="' + (b.run && !b.sub ? 'sm-btn-primary' : 'sm-btn-sub') + '"' + (b.color ? ' style="background:' + b.color + ';"' : '') + ' onclick="closeChoice(' + i + ')">' + b.label + '</button>'; }).join('')
+      + '</div></div>';
+    ov.classList.add('show');
+  }
+  var choiceRuns = [];
+  function closeChoice(i){
+    var ov = document.getElementById('removeItemModal');
+    if(ov) ov.classList.remove('show');
+    if(i >= 0 && choiceRuns[i]) choiceRuns[i]();
+    else if(i < 0) loadRoomsQuietly();
   }
 
   // 長押しで並べ替え（スマホは指、パソコンはマウス。0.45秒押したままにすると動かせる）

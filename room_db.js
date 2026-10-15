@@ -452,6 +452,34 @@ function defaultChecklist() {
       return { success: true };
     },
 
+    // テンプレに項目を足す（since があれば、それより後に作ったルームにだけ出る）
+    async addTemplateItem(b){
+      const kind = b.kind === 'cast' ? 'cast' : 'staff';
+      const name = kind === 'cast' ? 'castChecklist' : 'staffChecklist';
+      const label = str(b.label).trim().slice(0, 100);
+      if(!label) return { error: 'empty' };
+      const s = q(await sb.from('room_settings').select('value').eq('key', name).maybeSingle());
+      const list = kind === 'cast' ? castItems(s && s.value) : staffItems(s && s.value);
+      list.push({ key: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), label, owner: 'staffCheck', since: b.since || '' });
+      q(await sb.from('room_settings').upsert({ key: name, value: cleanItems(list, kind) }));
+      return { success: true };
+    },
+
+    // テンプレの項目の文章を直す（全部のルームで直る）
+    async renameTemplateItem(b){
+      const kind = b.kind === 'cast' ? 'cast' : 'staff';
+      const name = kind === 'cast' ? 'castChecklist' : 'staffChecklist';
+      const label = str(b.label).trim().slice(0, 100), key = str(b.key);
+      if(!label || !key) return { error: 'empty' };
+      const s = q(await sb.from('room_settings').select('value').eq('key', name).maybeSingle());
+      const list = kind === 'cast' ? castItems(s && s.value) : staffItems(s && s.value);
+      const it = list.find(x=>x.key === key);
+      if(!it) return { error: 'not_found' };
+      it.label = label;
+      q(await sb.from('room_settings').upsert({ key: name, value: cleanItems(list, kind) }));
+      return { success: true };
+    },
+
     // テンプレから項目を消す（全部のルームから消える。チェックの記録は残る）
     async removeTemplateItem(b){
       const name = b.kind === 'cast' ? 'castChecklist' : 'staffChecklist';
