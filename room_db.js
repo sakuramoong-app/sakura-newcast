@@ -331,15 +331,16 @@ function defaultChecklist() {
   const ROOM_ITEM_OWNERS = { staffOnly: 1, staffCheck: 1, cast: 1 };
   function buildMeta(staffList, castList, room){
     const ex = room ? (room.extraItems || []).filter(x=>x && typeof x === 'object') : [];
-    const hidden = {}, order = {};
+    const hidden = {}, order = {}, shown = {};
     ex.forEach(x=>{
       if(x.owner === 'hide') hidden[x.key] = true;
+      if(x.owner === 'show') shown[x.key] = true;   // 「今後のルーム」用の項目を、このルームにも出す
       if(x.owner === 'order' && Array.isArray(x.keys)) order[x.kind] = x.keys;
     });
     const cast = [], staff = [];
-    castList.forEach(x=>{ if(!room || applies(x, room.createdAt)) cast.push([x.key, { label: x.label, owner: x.owner }]); });
+    castList.forEach(x=>{ if(!room || applies(x, room.createdAt) || shown[x.key]) cast.push([x.key, { label: x.label, owner: x.owner }]); });
     ex.forEach(x=>{ if(x.key && x.label && (x.owner === 'staffCheck' || x.owner === 'cast')) cast.push([x.key, { label: x.label, owner: x.owner, roomOnly: true }]); });
-    staffList.forEach(x=>{ if(!room || applies(x, room.createdAt)) staff.push([x.key, { label: x.label, owner: 'staffOnly' }]); });
+    staffList.forEach(x=>{ if(!room || applies(x, room.createdAt) || shown[x.key]) staff.push([x.key, { label: x.label, owner: 'staffOnly' }]); });
     ex.forEach(x=>{ if(x.key && x.label && x.owner === 'staffOnly') staff.push([x.key, { label: x.label, owner: 'staffOnly', roomOnly: true }]); });
     // このルームでの並び（並びにない項目は、テンプレの順で後ろに）
     const sortBy = (arr, keys)=>{
@@ -460,8 +461,17 @@ function defaultChecklist() {
       if(!label) return { error: 'empty' };
       const s = q(await sb.from('room_settings').select('value').eq('key', name).maybeSingle());
       const list = kind === 'cast' ? castItems(s && s.value) : staffItems(s && s.value);
-      list.push({ key: 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), label, owner: 'staffCheck', since: b.since || '' });
+      const key = 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      list.push({ key, label, owner: 'staffCheck', since: b.since || '' });
       q(await sb.from('room_settings').upsert({ key: name, value: cleanItems(list, kind) }));
+      // 「このルームと今後のルーム」：このルームにも出す
+      if(b.showRoomId){
+        const r = q(await sb.from('room_rooms').select('extra_items').eq('room_id', str(b.showRoomId)).maybeSingle());
+        if(r){
+          const ex = (Array.isArray(r.extra_items) ? r.extra_items : []).concat([{ key, label: '-', owner: 'show' }]);
+          q(await sb.from('room_rooms').update({ extra_items: ex }).eq('room_id', str(b.showRoomId)));
+        }
+      }
       return { success: true };
     },
 

@@ -2357,8 +2357,9 @@
           + 'onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();' + go + ';}">'
           + '<select id="' + id + '_scope" class="sm-select" style="font-size:12px;padding:6px 8px;">'
           + '<option value="room">このルームのみ</option>'
-          + '<option value="all">全体（今あるルーム全て）</option>'
-          + '<option value="future">全体（これからのルームに反映）</option></select>'
+          + '<option value="room_future">このルームと今後のルーム全て</option>'
+          + '<option value="all">このルームと今あるルーム全て</option>'
+          + '<option value="future">今後のルームにのみ反映</option></select>'
           + '<button type="button" onclick="' + go + '">追加</button></div>';
     return html;
   }
@@ -2459,9 +2460,10 @@
     var sc = document.getElementById(inputId + '_scope');
     var scope = sc ? sc.value : 'room';
     if(scope === 'room'){ roomItemOp({ op: 'add', roomId: roomId, kind: kind, label: v }); return; }
-    // 全体：テンプレに足す（「これから」は、今あるルームには出ない）
-    templateOp({ action: 'addTemplateItem', kind: kind, label: v, since: scope === 'future' ? new Date().toISOString() : '' },
-      scope === 'future' ? '「' + v + '」をテンプレに足しました。これから作るルームに出ます（このルームには出ません）。' : '');
+    // テンプレに足す。「今後」はこれから作るルームに出す（since）。「このルームと今後」は、このルームにも出す
+    var future = scope === 'future' || scope === 'room_future';
+    templateOp({ action: 'addTemplateItem', kind: kind, label: v, since: future ? new Date().toISOString() : '', showRoomId: scope === 'room_future' ? roomId : '' },
+      scope === 'future' ? '「' + v + '」を足しました。これから作るルームに出ます（このルームと今あるルームには出ません）。' : '');
   }
   function templateOp(body, doneMsg){
     body.token = savedToken;
