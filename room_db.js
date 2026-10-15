@@ -452,6 +452,17 @@ function defaultChecklist() {
       return { success: true };
     },
 
+    // テンプレから項目を消す（全部のルームから消える。チェックの記録は残る）
+    async removeTemplateItem(b){
+      const name = b.kind === 'cast' ? 'castChecklist' : 'staffChecklist';
+      const key = str(b.key);
+      const s = q(await sb.from('room_settings').select('value').eq('key', name).maybeSingle());
+      const list = name === 'castChecklist' ? castItems(s && s.value) : staffItems(s && s.value);
+      const items = cleanItems(list.filter(x=>x.key !== key), b.kind === 'cast' ? 'cast' : 'staff');
+      q(await sb.from('room_settings').upsert({ key: name, value: items }));
+      return { success: true };
+    },
+
     async setDue(b){
       return q(await sb.rpc('room_staff_due', { p_id: str(b.id), p_key: str(b.key), p_due: str(b.due), p_label: str(b.label),
                                                 p_event: (b.event && typeof b.event === 'object') ? b.event : null }));

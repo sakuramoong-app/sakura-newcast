@@ -2412,8 +2412,47 @@
     var room = lastRoomsData.find(function(r){ return r.roomId === roomId; });
     var meta = room && rmeta(room)[key];
     if(!meta) return;
-    if(!confirm('「' + meta.label + '」をこのルームから外しますか？\n（ほかのルームとテンプレはそのままです）')) return;
-    roomItemOp({ op: 'remove', roomId: roomId, key: key });
+    // このルームだけの項目は、そのまま外す
+    if(meta.roomOnly){
+      if(!confirm('「' + meta.label + '」をこのルームから消しますか？')) return;
+      roomItemOp({ op: 'remove', roomId: roomId, key: key });
+      return;
+    }
+    // テンプレの項目は、このルームだけか、全部のルームか選ぶ
+    var kind = meta.owner === 'staffOnly' ? 'staff' : 'cast';
+    var ov = document.getElementById('removeItemModal');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'removeItemModal';
+      ov.className = 'sm-modal';
+      var downOnBackdrop = false;
+      ov.addEventListener('mousedown', function(e){ downOnBackdrop = (e.target === ov); });
+      ov.addEventListener('click', function(e){ if(e.target === ov && downOnBackdrop) ov.classList.remove('show'); });
+      document.body.appendChild(ov);
+    }
+    var close = "document.getElementById('removeItemModal').classList.remove('show')";
+    ov.innerHTML = '<div class="sm-modal-card">'
+      + '<button type="button" class="sm-modal-x" onclick="' + close + '" aria-label="閉じる">×</button>'
+      + '<div class="sm-modal-title">🗑 項目を消す</div>'
+      + '<div class="sm-modal-note">「' + escapeHtml(meta.label) + '」をどうしますか？<br>（今までのチェックの記録は残ります）</div>'
+      + '<div class="sm-modal-actions" style="flex-direction:column;align-items:stretch;">'
+      + '<button type="button" class="sm-btn-primary" style="background:#E8B04A;" onclick="' + close + ';roomItemOp({op:\'remove\',roomId:\'' + roomId + '\',key:\'' + key + '\'})">このルームだけ外す</button>'
+      + '<button type="button" class="sm-btn-primary" onclick="' + close + ';removeTemplateItem(\'' + kind + '\',\'' + key + '\')">全部のルームから消す（テンプレからも消す）</button>'
+      + '<button type="button" class="sm-btn-sub" onclick="' + close + '">やめる</button>'
+      + '</div></div>';
+    ov.classList.add('show');
+  }
+  function removeTemplateItem(kind, key){
+    roomFetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'removeTemplateItem', kind: kind, key: key, token: savedToken }) })
+      .then(function(res){ return res.json(); })
+      .then(function(result){
+        if(result.error){
+          if(String(result.error).indexOf('unauthorized') >= 0){ handleRoomAuthError(); return; }
+          alert('消せませんでした：' + result.error);
+        }
+        loadRoomsQuietly();
+      })
+      .catch(function(){ alert('消せませんでした（通信エラー）'); loadRoomsQuietly(); });
   }
   function addRoomItem(roomId, kind, inputId){
     var el = document.getElementById(inputId);
