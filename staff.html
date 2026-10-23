@@ -1633,15 +1633,13 @@
 
       // アコーディオン1：口頭説明チェックリスト
       html += renderAccordion('talk' + idx, '📋 口頭説明チェックリスト', talkDoneCount, talkKeys.length, (function(){
-        // 説明する順番（2番目の「報酬説明」はコースごとの金額を伝えるだけなので、チェックリストには入れていない）
+        // 説明する順番（上から順に、チェックリストを見ながら）
         var inner = '<div class="talk-order-note" style="background:#FFF8D6;border:1.5px dashed #E0B400;border-radius:12px;padding:8px 12px;margin:4px 0 10px;font-size:13px;line-height:1.7">'
-          + '<b>📣 この順番で、チェックリストを見ながら説明してください</b><br>'
-          + '1 法律・順守事項 → <b>2 報酬説明</b> → 3 昇給・降給 → 4 提示する金額・バック（お給料） → 5 交通費・雑費について → 6 お金のもらい忘れ・貴重品管理 → 7 確定申告・インボイス<br>'
-          + '<span style="color:#8a6500">※ 2番目の報酬説明は、コースごとに何円の報酬かを伝えるだけなので、このチェックリストには入っていません。</span></div>';
+          + '<b>📣 上から順番に、チェックリストを見ながら説明してください</b></div>';
         talkKeys.forEach(function(key, tIdx){
           var meta = globalTalkChecklistMeta[key];
           var state = talkChecklist[key] || { done: false };
-          inner += renderTalkCheckItem(room.roomId, key, meta, state, isClosed, tIdx === 0 ? 1 : tIdx + 2);   // 2番は報酬説明（チェックリストの外）
+          inner += renderTalkCheckItem(room.roomId, key, meta, state, isClosed, tIdx + 1);
         });
         return inner;
       })());
